@@ -1,0 +1,18 @@
+ministry:
+  - name: Minister of Finance, Planning and Economic Development
+    department:
+      - name: Central Bank of Sri Lanka
+        body:
+          - id: cbsl_governing_board
+            name: CBSL Governing Board
+            type: board
+            mandated_by: cbsl_act_2023
+            meetings:
+              - governing_board_meeting
+
+          - id: cbsl_monetary_policy_board
+            name: CBSL Monetary Policy Board
+            type: board
+            mandated_by: cbsl_act_2023
+            meetings:
+              - monetary_policy_board_meeting
