@@ -1,0 +1,71 @@
+# MeetingsTracker — ministry data pack schema
+# Bare ids in data files are resolved using the links below.
+
+version: 1
+
+overview: |
+  One ministry's dataset. Acts define legal authority. Organisation is the
+  hierarchy. Meetings hold types and instances. RTIs record requests and what
+  they discovered.
+
+files:
+  acts: acts.yaml
+  organisation: organisation.yaml
+  meetings: meetings.yaml
+  rtis: rtis.yaml
+
+entities:
+  act:
+    file: acts
+    collection: acts
+    id_field: id
+
+  ministry:
+    file: organisation
+    collection: ministry
+    id_field: id
+
+  department:
+    file: organisation
+    collection: ministry → department
+    id_field: id
+
+  body:
+    file: organisation
+    collection: ministry → department → body
+    id_field: id
+
+  meeting:
+    file: meetings
+    collection: meetings
+    id_field: id
+
+  meeting_instance:
+    file: meetings
+    collection: meetings → instances
+    id_field: id
+
+  rti_document:
+    file: rtis
+    collection: rti_documents
+    id_field: id
+
+# Field name → entity type. Optional `at` limits the rule to a parent key.
+links:
+  - field: mandated_by
+    target: act
+
+  # meetings lists may appear on ministry, department, or body (not the top-level meetings.yaml key)
+  - field: meetings
+    at: [ministry, department, body]
+    target: meeting
+    many: true
+
+  # RTI recipient: ministry, department, or body (under sent_to)
+  - field: recipient_id
+    at: sent_to
+    target: [ministry, department, body]
+
+  - field: discovered_events
+    target: meeting_instance
+    many: true
