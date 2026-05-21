@@ -1,0 +1,119 @@
+# MeetingsTracker — global ministry pack schema
+# Same layout for every ministry folder under data/. Drives OpenGIN ingestion mapping.
+
+version: 1
+
+overview: |
+  One ministry's dataset under data/<Ministry name>/. Acts define legal authority.
+  Organisation is the hierarchy (ministry → department → board/council).
+  Meetings hold types and instances. RTIs record requests and what they discovered.
+
+pack:
+  files:
+    acts: acts.yaml
+    organisations: organisations.yaml
+    meetings: meetings.yaml
+    rtis: rtis.yaml
+
+entities:
+  act:
+    file: acts
+    collection: acts
+    id_field: id
+    name_field: name
+    kind: { major: Document, minor: Act }
+
+  ministry:
+    file: organisations
+    collection: ministry
+    id_field: id
+    name_field: name
+    kind: { major: Organisation, minor: Ministry }
+
+  department:
+    file: organisations
+    collection: ministry → department
+    id_field: id
+    name_field: name
+    kind: { major: Organisation, minor: Department }
+    parent_relationships:
+      - relation: AS_DEPARTMENT
+        parent_type: ministry
+        parent_id_from: _parent_ministry_id
+
+  board:
+    file: organisations
+    collection: ministry → department → board
+    id_field: id
+    name_field: name
+    kind: { major: Organisation, minor: Board }
+    parent_relationships:
+      - relation: AS_BODY
+        parent_type: department
+        parent_id_from: _parent_department_id
+      - relation: AS_BODY
+        parent_type: ministry
+        parent_id_from: _parent_department_id
+
+  council:
+    file: organisations
+    collection: ministry → department → council
+    id_field: id
+    name_field: name
+    kind: { major: Organisation, minor: Council }
+    parent_relationships:
+      - relation: AS_BODY
+        parent_type: department
+        parent_id_from: _parent_department_id
+      - relation: AS_BODY
+        parent_type: ministry
+        parent_id_from: _parent_department_id
+
+  meeting:
+    file: meetings
+    collection: meetings
+    id_field: id
+    name_field: name
+    kind: { major: Event, minor: Meeting }
+
+  meeting_instance:
+    file: meetings
+    collection: meetings → instances
+    id_field: id
+    name_field: name
+    kind: { major: Event, minor: MeetingInstance }
+    parent_relationships:
+      - relation: HAS_EVENT
+        parent_type: meeting
+        parent_id_from: _parent_meeting_id
+
+  rti_document:
+    file: rtis
+    collection: rti_documents
+    id_field: id
+    name_field: name
+    kind: { major: Document, minor: RTI }
+    # attributes:
+    #   - key: summary
+    #     source: summary
+
+links:
+  - field: mandated_by
+    relation: mandates
+    target: act
+
+  - field: meetings
+    relation: has_event
+    at: [ministry, department, board, council]
+    target: meeting
+    many: true
+
+  - field: recipient_id
+    relation: sent_to
+    at: sent_to
+    target: [ministry, department, board, council]
+
+  - field: discovered_events
+    relation: discovers
+    target: meeting_instance
+    many: true
