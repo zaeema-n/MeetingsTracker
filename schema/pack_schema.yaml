@@ -4,11 +4,12 @@
 version: 1
 
 overview: |
-  One ministry's dataset under data/<Ministry name>/. Acts define legal authority.
-  Organisation is the hierarchy (ministry → department → board/council).
+  One ministry's dataset under data/<Ministry name>/. President (Person/citizen) scopes
+  resolve for shared org; boards/councils and other files are created with explicit ids.
   Meetings hold types and instances. RTIs record requests and what they discovered.
 
 pack:
+  requires_active_at: true
   files:
     acts: acts.yaml
     organisations: organisations.yaml
@@ -22,20 +23,35 @@ entities:
     id_field: id
     name_field: name
     kind: { major: Document, minor: Act }
+    default_ingest: create
+
+  president:
+    file: organisations
+    collection: president
+    id_field: id
+    name_field: name
+    kind: { major: Person, minor: citizen }
+    default_ingest: resolve
 
   ministry:
     file: organisations
-    collection: ministry
+    collection: president → ministry
     id_field: id
     name_field: name
     kind: { major: Organisation, minor: Ministry }
+    default_ingest: resolve
+    parent_relationships:
+      - relation: AS_PRESIDENT
+        parent_type: president
+        parent_id_from: _parent_president_id
 
   department:
     file: organisations
-    collection: ministry → department
+    collection: president → ministry → department
     id_field: id
     name_field: name
     kind: { major: Organisation, minor: Department }
+    default_ingest: resolve
     parent_relationships:
       - relation: AS_DEPARTMENT
         parent_type: ministry
@@ -43,7 +59,8 @@ entities:
 
   board:
     file: organisations
-    collection: ministry → department → board
+    collection: president → ministry → department → board
+    default_ingest: create
     id_field: id
     name_field: name
     kind: { major: Organisation, minor: Board }
@@ -57,7 +74,8 @@ entities:
 
   council:
     file: organisations
-    collection: ministry → department → council
+    collection: president → ministry → department → council
+    default_ingest: create
     id_field: id
     name_field: name
     kind: { major: Organisation, minor: Council }
@@ -75,6 +93,7 @@ entities:
     id_field: id
     name_field: name
     kind: { major: Event, minor: Meeting }
+    default_ingest: create
 
   meeting_instance:
     file: meetings
@@ -82,6 +101,7 @@ entities:
     id_field: id
     name_field: name
     kind: { major: Event, minor: MeetingInstance }
+    default_ingest: create
     parent_relationships:
       - relation: HAS_EVENT
         parent_type: meeting
@@ -93,6 +113,7 @@ entities:
     id_field: id
     name_field: name
     kind: { major: Document, minor: RTI }
+    default_ingest: create
     # attributes:
     #   - key: summary
     #     source: summary
