@@ -4,3 +4,7 @@ class PackLoadError(Exception):
 
 class PackSchemaError(Exception):
     """Raised when the global pack schema is invalid or missing required fields."""
+
+
+class ResolveError(Exception):
+    """Raised when a resolve-mode pack record cannot be matched in OpenGIN."""

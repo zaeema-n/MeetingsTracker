@@ -41,7 +41,7 @@ entities:
     kind: { major: Organisation, minor: Ministry }
     default_ingest: resolve
     parent_relationships:
-      - relation: AS_PRESIDENT
+      - relation: AS_MINISTER
         parent_type: president
         parent_id_from: _parent_president_id
 

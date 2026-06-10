@@ -27,6 +27,7 @@ class ResolveContext:
     president_id: str | None = None
     ministry_id: str | None = None
     department_id: str | None = None
+    resolved_by_path: dict[str, str] = field(default_factory=dict)
 
     def set_resolved_id(self, entity_type: str, entity_id: str) -> None:
         if entity_type == "president":
@@ -36,6 +37,13 @@ class ResolveContext:
         elif entity_type == "department":
             self.department_id = entity_id
 
+    def register_resolution(self, path: str, entity_type: str, entity_id: str) -> None:
+        self.resolved_by_path[path] = entity_id
+        self.set_resolved_id(entity_type, entity_id)
+
+    def get_resolved_id(self, path: str) -> str | None:
+        return self.resolved_by_path.get(path)
+
     def get_parent_id(self, context_key: str) -> str | None:
         mapping = {
             "_parent_president_id": self.president_id,
@@ -43,6 +51,15 @@ class ResolveContext:
             "_parent_department_id": self.department_id,
         }
         return mapping.get(context_key)
+
+    def get_parent_id_for_record(self, record_context: dict[str, Any], context_key: str) -> str | None:
+        path_key = context_key.replace("_id", "_path")
+        parent_path = record_context.get(path_key)
+        if parent_path:
+            resolved = self.resolved_by_path.get(parent_path)
+            if resolved:
+                return resolved
+        return self.get_parent_id(context_key)
 
 
 @dataclass
