@@ -1,4 +1,5 @@
 from ingestion.utils.http_client import http_client
+from ingestion.utils.util_functions import Util
 from aiohttp import ClientSession
 import os
 from dotenv import load_dotenv
@@ -55,8 +56,14 @@ class ReadService:
         async with self.session.post(url, json=payload, headers=headers) as response:
             res_json = await handle_api_response(response, error_prefix="Failed to get entities")
             response_list = res_json.get("body", [])
-            # Return list of Entity objects
-            result = [Entity.model_validate(item) for item in response_list]
+            result: list[Entity] = []
+            for item in response_list:
+                entity = Entity.model_validate(item)
+                if entity.name:
+                    entity = entity.model_copy(
+                        update={"name": Util.decode_search_entity_name(entity.name)}
+                    )
+                result.append(entity)
             return result
     
     @api_retry_decorator

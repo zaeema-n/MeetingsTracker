@@ -33,6 +33,17 @@ class Util:
                 return "Unknown"
 
     @staticmethod
+    def decode_search_entity_name(name: str) -> str:
+        """Decode entity name from search API; pass through plain text unchanged."""
+        stripped = str(name or "").strip()
+        if not stripped:
+            return ""
+        if not (stripped.startswith("{") and '"value"' in stripped):
+            return stripped
+        decoded = Util.decode_protobuf_attribute_name(stripped)
+        return decoded if decoded != "Unknown" else stripped
+
+    @staticmethod
     def validate_tabular_dataset(data_content: dict) -> bool:
         """
         Validate the structure of a dataset JSON content.
