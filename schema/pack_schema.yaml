@@ -4,8 +4,9 @@
 version: 1
 
 overview: |
-  One ministry's dataset under data/<Ministry name>/. President (Person/citizen) scopes
-  resolve for shared org; boards/councils and other files are created with explicit ids.
+  One ministry's dataset under data/<Ministry name>/. Government (Organisation/government)
+  is the root; president (Person/citizen) is resolved under government at --active-at.
+  Boards/councils and other files are created with explicit ids.
   Meetings hold types and instances. RTIs record requests and what they discovered.
 
 pack:
@@ -25,17 +26,30 @@ entities:
     kind: { major: Document, minor: Act }
     default_ingest: create
 
+  government:
+    file: organisations
+    collection: government
+    id_field: id
+    name_field: name
+    kind: { major: Organisation, minor: government }
+    default_ingest: resolve
+    resolve_without_active_at: true
+
   president:
     file: organisations
-    collection: president
+    collection: government → president
     id_field: id
     name_field: name
     kind: { major: Person, minor: citizen }
     default_ingest: resolve
+    parent_relationships:
+      - relation: AS_PRESIDENT
+        parent_type: government
+        parent_id_from: _parent_government_id
 
   ministry:
     file: organisations
-    collection: president → ministry
+    collection: government → president → ministry
     id_field: id
     name_field: name
     kind: { major: Organisation, minor: Ministry }
@@ -47,7 +61,7 @@ entities:
 
   department:
     file: organisations
-    collection: president → ministry → department
+    collection: government → president → ministry → department
     id_field: id
     name_field: name
     kind: { major: Organisation, minor: Department }
@@ -59,7 +73,7 @@ entities:
 
   board:
     file: organisations
-    collection: president → ministry → department → board
+    collection: government → president → ministry → department → board
     default_ingest: create
     id_field: id
     name_field: name
@@ -74,7 +88,7 @@ entities:
 
   council:
     file: organisations
-    collection: president → ministry → department → council
+    collection: government → president → ministry → department → council
     default_ingest: create
     id_field: id
     name_field: name

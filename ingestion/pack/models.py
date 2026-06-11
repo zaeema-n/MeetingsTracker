@@ -7,6 +7,7 @@ from typing import Any, Iterator, Literal
 IngestMode = Literal["resolve", "create"]
 
 INGEST_ORDER: list[str] = [
+    "government",
     "president",
     "ministry",
     "department",
@@ -24,13 +25,16 @@ class ResolveContext:
     """Shared resolution state for a single ingest run."""
 
     active_at: str
+    government_id: str | None = None
     president_id: str | None = None
     ministry_id: str | None = None
     department_id: str | None = None
     resolved_by_path: dict[str, str] = field(default_factory=dict)
 
     def set_resolved_id(self, entity_type: str, entity_id: str) -> None:
-        if entity_type == "president":
+        if entity_type == "government":
+            self.government_id = entity_id
+        elif entity_type == "president":
             self.president_id = entity_id
         elif entity_type == "ministry":
             self.ministry_id = entity_id
@@ -46,6 +50,7 @@ class ResolveContext:
 
     def get_parent_id(self, context_key: str) -> str | None:
         mapping = {
+            "_parent_government_id": self.government_id,
             "_parent_president_id": self.president_id,
             "_parent_ministry_id": self.ministry_id,
             "_parent_department_id": self.department_id,

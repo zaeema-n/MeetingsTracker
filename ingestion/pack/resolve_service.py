@@ -8,14 +8,16 @@ from ingestion.pack.models import IngestRecord, PackState, ResolveContext
 from ingestion.pack.schema_loader import get_entity_config
 from ingestion.services.read_service import ReadService
 
-RESOLVE_ENTITY_TYPES = ("president", "ministry", "department")
+RESOLVE_ENTITY_TYPES = ("government", "president", "ministry", "department")
 
 PARENT_PATH_KEY = {
+    "president": "_parent_government_path",
     "ministry": "_parent_president_path",
     "department": "_parent_ministry_path",
 }
 
 PARENT_RELATION = {
+    "president": "AS_PRESIDENT",
     "ministry": "AS_MINISTER",
     "department": "AS_DEPARTMENT",
 }
@@ -37,8 +39,12 @@ def _entity_name_matches(entity: Entity, expected_name: str) -> bool:
     return _normalize_name(entity.name) == expected_name
 
 
+def _resolve_without_active_at(entity_cfg: dict[str, Any]) -> bool:
+    return bool(entity_cfg.get("resolve_without_active_at", False))
+
+
 class ResolveService:
-    """Resolve president → ministry → department records via ReadService."""
+    """Resolve government → president → ministry → department records via ReadService."""
 
     def __init__(self, read_service: ReadService):
         self.read_service = read_service
@@ -69,9 +75,12 @@ class ResolveService:
         entity_cfg = get_entity_config(schema, entity_type)
         expected_kind = _kind_from_config(entity_cfg.get("kind", {}))
 
-        if entity_type == "president":
-            entity_id = await self._resolve_president(
-                expected_name, expected_kind, context.active_at, record.path
+        if entity_type == "government" or _resolve_without_active_at(entity_cfg):
+            entity_id = await self._resolve_root_entity(
+                entity_label=entity_type,
+                expected_name=expected_name,
+                expected_kind=expected_kind,
+                path=record.path,
             )
         else:
             parent_path_key = PARENT_PATH_KEY[entity_type]
@@ -101,13 +110,15 @@ class ResolveService:
         context.register_resolution(record.path, entity_type, entity_id)
         return entity_id
 
-    async def _resolve_president(
+    async def _resolve_root_entity(
         self,
+        *,
+        entity_label: str,
         expected_name: str,
         expected_kind: Kind,
-        active_at: str,
         path: str,
     ) -> str:
+        """Resolve a root entity by name and kind only (no active-at filtering)."""
         candidates = await self.read_service.get_entities(
             Entity(name=expected_name, kind=expected_kind)
         )
@@ -123,10 +134,9 @@ class ResolveService:
 
         return self._require_unique_match(
             matches,
-            entity_label="president",
+            entity_label=entity_label,
             name=expected_name,
             path=path,
-            active_at=active_at,
         )
 
     async def _resolve_child_by_relation(
@@ -184,16 +194,18 @@ class ResolveService:
         entity_label: str,
         name: str,
         path: str,
-        active_at: str,
+        active_at: str | None = None,
         parent_id: str | None = None,
         relation_name: str | None = None,
     ) -> str:
         if len(matches) == 1:
             return matches[0]
 
-        scope = f" at {path} on {active_at}"
+        scope = f" at {path}"
         if parent_id and relation_name:
             scope = f" under {parent_id} via {relation_name}{scope}"
+        if active_at:
+            scope = f"{scope} on {active_at}"
 
         if not matches:
             raise ResolveError(

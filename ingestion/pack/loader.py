@@ -16,6 +16,7 @@ from ingestion.pack.schema_loader import (
 
 # Keys that hold nested entity lists — stripped from parent record `data`
 NESTED_KEYS_BY_ENTITY: dict[str, set[str]] = {
+    "government": {"president"},
     "president": {"ministry"},
     "ministry": {"department"},
     "department": {"board", "council"},
@@ -99,72 +100,95 @@ def _walk_organisations(
     records: list[IngestRecord],
     schema: dict[str, Any],
 ) -> None:
-    presidents = organisations.get("president")
-    if not isinstance(presidents, list):
-        raise PackLoadError("organisations.yaml must contain a 'president' list at the root")
+    governments = organisations.get("government")
+    if not isinstance(governments, list):
+        raise PackLoadError("organisations.yaml must contain a 'government' list at the root")
 
-    for president_index, president in enumerate(presidents):
-        if not isinstance(president, dict):
-            raise PackLoadError(f"president[{president_index}] must be a mapping")
+    for government_index, government in enumerate(governments):
+        if not isinstance(government, dict):
+            raise PackLoadError(f"government[{government_index}] must be a mapping")
 
-        president_path = f"president[{president_index}]"
-        president_context: dict[str, Any] = {}
-        _append_record(records, "president", president, president_path, president_context, schema)
+        government_path = f"government[{government_index}]"
+        government_context: dict[str, Any] = {}
+        _append_record(
+            records, "government", government, government_path, government_context, schema
+        )
 
-        ministries = president.get("ministry", [])
-        if not isinstance(ministries, list):
-            raise PackLoadError(f"{president_path}.ministry must be a list")
+        presidents = government.get("president", [])
+        if not isinstance(presidents, list):
+            raise PackLoadError(f"{government_path}.president must be a list")
 
-        for ministry_index, ministry in enumerate(ministries):
-            if not isinstance(ministry, dict):
-                raise PackLoadError(f"{president_path}.ministry[{ministry_index}] must be a mapping")
-
-            ministry_path = f"{president_path}.ministry[{ministry_index}]"
-            ministry_context = {
-                "_parent_president_path": president_path,
-            }
-            _append_record(records, "ministry", ministry, ministry_path, ministry_context, schema)
-
-            departments = ministry.get("department", [])
-            if not isinstance(departments, list):
-                raise PackLoadError(f"{ministry_path}.department must be a list")
-
-            for department_index, department in enumerate(departments):
-                if not isinstance(department, dict):
-                    raise PackLoadError(
-                        f"{ministry_path}.department[{department_index}] must be a mapping"
-                    )
-
-                department_path = f"{ministry_path}.department[{department_index}]"
-                department_context = {
-                    "_parent_president_path": president_path,
-                    "_parent_ministry_path": ministry_path,
-                }
-                _append_record(
-                    records, "department", department, department_path, department_context, schema
+        for president_index, president in enumerate(presidents):
+            if not isinstance(president, dict):
+                raise PackLoadError(
+                    f"{government_path}.president[{president_index}] must be a mapping"
                 )
 
-                for collection, entity_type in (("board", "board"), ("council", "council")):
-                    items = department.get(collection, [])
-                    if not items:
-                        continue
-                    if not isinstance(items, list):
-                        raise PackLoadError(f"{department_path}.{collection} must be a list")
+            president_path = f"{government_path}.president[{president_index}]"
+            president_context = {
+                "_parent_government_path": government_path,
+            }
+            _append_record(records, "president", president, president_path, president_context, schema)
 
-                    for item_index, item in enumerate(items):
-                        if not isinstance(item, dict):
-                            raise PackLoadError(
-                                f"{department_path}.{collection}[{item_index}] must be a mapping"
-                            )
-                        item_path = f"{department_path}.{collection}[{item_index}]"
-                        item_context = {
-                            "_parent_president_path": president_path,
-                            "_parent_ministry_path": ministry_path,
-                            "_parent_department_path": department_path,
-                        }
-                        _append_record(
-                            records, entity_type, item, item_path, item_context, schema
+            ministries = president.get("ministry", [])
+            if not isinstance(ministries, list):
+                raise PackLoadError(f"{president_path}.ministry must be a list")
+
+            for ministry_index, ministry in enumerate(ministries):
+                if not isinstance(ministry, dict):
+                    raise PackLoadError(
+                        f"{president_path}.ministry[{ministry_index}] must be a mapping"
+                    )
+
+                ministry_path = f"{president_path}.ministry[{ministry_index}]"
+                ministry_context = {
+                    "_parent_government_path": government_path,
+                    "_parent_president_path": president_path,
+                }
+                _append_record(records, "ministry", ministry, ministry_path, ministry_context, schema)
+
+                departments = ministry.get("department", [])
+                if not isinstance(departments, list):
+                    raise PackLoadError(f"{ministry_path}.department must be a list")
+
+                for department_index, department in enumerate(departments):
+                    if not isinstance(department, dict):
+                        raise PackLoadError(
+                            f"{ministry_path}.department[{department_index}] must be a mapping"
                         )
+
+                    department_path = f"{ministry_path}.department[{department_index}]"
+                    department_context = {
+                        "_parent_government_path": government_path,
+                        "_parent_president_path": president_path,
+                        "_parent_ministry_path": ministry_path,
+                    }
+                    _append_record(
+                        records, "department", department, department_path, department_context, schema
+                    )
+
+                    for collection, entity_type in (("board", "board"), ("council", "council")):
+                        items = department.get(collection, [])
+                        if not items:
+                            continue
+                        if not isinstance(items, list):
+                            raise PackLoadError(f"{department_path}.{collection} must be a list")
+
+                        for item_index, item in enumerate(items):
+                            if not isinstance(item, dict):
+                                raise PackLoadError(
+                                    f"{department_path}.{collection}[{item_index}] must be a mapping"
+                                )
+                            item_path = f"{department_path}.{collection}[{item_index}]"
+                            item_context = {
+                                "_parent_government_path": government_path,
+                                "_parent_president_path": president_path,
+                                "_parent_ministry_path": ministry_path,
+                                "_parent_department_path": department_path,
+                            }
+                            _append_record(
+                                records, entity_type, item, item_path, item_context, schema
+                            )
 
 
 def _load_collection_records(
@@ -215,7 +239,7 @@ def _build_indexes(records: list[IngestRecord]) -> dict[str, dict[str, dict]]:
     """
     Build id → record lookups for create-path entities.
 
-    Resolve records (president, ministry, department) are skipped because they
+    Resolve records (government, president, ministry, department) are skipped because they
     have no pack id. Mappers use these indexes to resolve bare-id link fields
     (e.g. mandated_by, meetings, discovered_events) to the correct entity type.
     """
