@@ -97,3 +97,9 @@ class PackState:
 
     def records_by_type(self, entity_type: str) -> list[IngestRecord]:
         return [record for record in self.records if record.entity_type == entity_type]
+
+    def record_at_path(self, path: str) -> IngestRecord | None:
+        for record in self.records:
+            if record.path == path:
+                return record
+        return None
