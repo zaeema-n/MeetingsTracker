@@ -71,7 +71,7 @@ Performs resolve lookups and existence checks, but does not create or update any
 ```bash
 python -m ingestion.cli.ingest_pack \
   "data/Minister of Finance, Planning and Economic Development" \
-  --active-at 2024-11-01 \
+  --active-at 2026-06-12 \
   --dry-run
 ```
 
@@ -80,7 +80,7 @@ python -m ingestion.cli.ingest_pack \
 ```bash
 python -m ingestion.cli.ingest_pack \
   "data/Minister of Finance, Planning and Economic Development" \
-  --active-at 2024-11-01
+  --active-at 2026-06-12
 ```
 
 ### CLI flags

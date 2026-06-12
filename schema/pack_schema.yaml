@@ -23,7 +23,7 @@ entities:
     collection: acts
     id_field: id
     name_field: name
-    kind: { major: Document, minor: Act }
+    kind: { major: Document, minor: act }
     default_ingest: create
 
   government:
@@ -66,7 +66,7 @@ entities:
     collection: government → president → ministry → department
     id_field: id
     name_field: name
-    kind: { major: Organisation, minor: Department }
+    kind: { major: Organisation, minor: department }
     default_ingest: resolve
     parent_relationships:
       - relation: AS_DEPARTMENT
@@ -79,7 +79,7 @@ entities:
     default_ingest: create
     id_field: id
     name_field: name
-    kind: { major: Organisation, minor: Board }
+    kind: { major: Organisation, minor: board }
     parent_relationships:
       - relation: AS_BODY
         parent_type: department
@@ -94,7 +94,7 @@ entities:
     default_ingest: create
     id_field: id
     name_field: name
-    kind: { major: Organisation, minor: Council }
+    kind: { major: Organisation, minor: council }
     parent_relationships:
       - relation: AS_BODY
         parent_type: department
@@ -108,7 +108,7 @@ entities:
     collection: meetings
     id_field: id
     name_field: name
-    kind: { major: Event, minor: Meeting }
+    kind: { major: Event, minor: meeting }
     default_ingest: create
 
   meeting_instance:
@@ -116,7 +116,7 @@ entities:
     collection: meetings → instances
     id_field: id
     name_field: name
-    kind: { major: Event, minor: MeetingInstance }
+    kind: { major: Event, minor: meetingInstance }
     default_ingest: create
     parent_relationships:
       - relation: HAS_EVENT
@@ -128,7 +128,7 @@ entities:
     collection: rti_documents
     id_field: id
     name_field: name
-    kind: { major: Document, minor: RTI }
+    kind: { major: Document, minor: rti }
     default_ingest: create
     # attributes:
     #   - key: summary

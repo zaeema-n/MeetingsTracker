@@ -184,20 +184,20 @@ class IngestRunner:
             )
 
     def _log_summary(self, result: IngestResult) -> None:
-        logger.info(
+        logger.success(
             "Ingest complete (active_at=%s, dry_run=%s, strict=%s)",
             result.active_at,
             result.dry_run,
             result.strict,
         )
-        logger.info("  resolved: %s", result.resolved)
-        logger.info("  created: %s", result.created)
-        logger.info("  skipped_existing: %s", result.skipped_existing)
+        logger.success("  resolved: %s", result.resolved)
+        logger.success("  created: %s", result.created)
+        logger.success("  skipped_existing: %s", result.skipped_existing)
         if result.dry_run:
-            logger.info("  dry_run_would_create: %s", result.dry_run_would_create)
-            logger.info(
+            logger.success("  dry_run_would_create: %s", result.dry_run_would_create)
+            logger.success(
                 "  dry_run_would_update_parent: %s",
                 result.dry_run_would_update_parent,
             )
         else:
-            logger.info("  parent_updates: %s", result.parent_updates)
+            logger.success("  parent_updates: %s", result.parent_updates)
