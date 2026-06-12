@@ -273,10 +273,11 @@ class EntityMapper:
         )
 
     def _make_relation(self, relation_name: str, related_entity_id: str) -> AddRelation:
+        relation_id = str(uuid.uuid4())
         return AddRelation(
-            key=relation_name,
+            key=relation_id,
             value=AddRelationValue(
-                id=str(uuid.uuid4()),
+                id=relation_id,
                 relatedEntityId=related_entity_id,
                 startTime=self.active_at,
                 name=relation_name,
