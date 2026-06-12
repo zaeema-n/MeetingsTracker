@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import uuid
 from typing import Any
 
 from ingestion.models.schema import AddRelation, AddRelationValue, EntityCreate, Kind, NameValue
@@ -275,6 +276,7 @@ class EntityMapper:
         return AddRelation(
             key=relation_name,
             value=AddRelationValue(
+                id=str(uuid.uuid4()),
                 relatedEntityId=related_entity_id,
                 startTime=self.active_at,
                 name=relation_name,
