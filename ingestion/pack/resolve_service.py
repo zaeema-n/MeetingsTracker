@@ -27,12 +27,28 @@ def _normalize_name(value: str | None) -> str:
     return str(value or "").strip()
 
 
-def _kind_from_config(kind_cfg: dict[str, Any]) -> Kind:
-    return Kind(major=kind_cfg.get("major", ""), minor=kind_cfg.get("minor", ""))
+def _allowed_kinds_from_config(kind_cfg: dict[str, Any]) -> list[Kind]:
+    major = str(kind_cfg.get("major", "")).strip()
+    minors = kind_cfg.get("minors")
+    if isinstance(minors, list) and minors:
+        return [
+            Kind(major=major, minor=str(minor).strip())
+            for minor in minors
+            if str(minor).strip()
+        ]
+
+    minor = str(kind_cfg.get("minor", "")).strip()
+    if major or minor:
+        return [Kind(major=major, minor=minor)]
+    return [Kind()]
 
 
 def _kind_matches(entity: Entity, expected: Kind) -> bool:
     return entity.kind.major == expected.major and entity.kind.minor == expected.minor
+
+
+def _kind_matches_allowed(entity: Entity, allowed_kinds: list[Kind]) -> bool:
+    return any(_kind_matches(entity, kind) for kind in allowed_kinds)
 
 
 def _entity_name_matches(entity: Entity, expected_name: str) -> bool:
@@ -73,13 +89,13 @@ class ResolveService:
             )
 
         entity_cfg = get_entity_config(schema, entity_type)
-        expected_kind = _kind_from_config(entity_cfg.get("kind", {}))
+        allowed_kinds = _allowed_kinds_from_config(entity_cfg.get("kind", {}))
 
         if entity_type == "government" or _resolve_without_active_at(entity_cfg):
             entity_id = await self._resolve_root_entity(
                 entity_label=entity_type,
                 expected_name=expected_name,
-                expected_kind=expected_kind,
+                allowed_kinds=allowed_kinds,
                 path=record.path,
             )
         else:
@@ -102,7 +118,7 @@ class ResolveService:
                 parent_id=parent_id,
                 relation_name=relation_name,
                 expected_name=expected_name,
-                expected_kind=expected_kind,
+                allowed_kinds=allowed_kinds,
                 active_at=context.active_at,
                 path=record.path,
             )
@@ -115,22 +131,25 @@ class ResolveService:
         *,
         entity_label: str,
         expected_name: str,
-        expected_kind: Kind,
+        allowed_kinds: list[Kind],
         path: str,
     ) -> str:
         """Resolve a root entity by name and kind only (no active-at filtering)."""
-        candidates = await self.read_service.get_entities(
-            Entity(name=expected_name, kind=expected_kind)
-        )
-
         matches: list[str] = []
-        for candidate in candidates:
-            if not candidate.id:
-                continue
-            if not _kind_matches(candidate, expected_kind):
-                continue
-            if _entity_name_matches(candidate, expected_name):
-                matches.append(candidate.id)
+        seen_ids: set[str] = set()
+
+        for kind in allowed_kinds:
+            candidates = await self.read_service.get_entities(
+                Entity(name=expected_name, kind=kind)
+            )
+            for candidate in candidates:
+                if not candidate.id or candidate.id in seen_ids:
+                    continue
+                if not _kind_matches_allowed(candidate, allowed_kinds):
+                    continue
+                if _entity_name_matches(candidate, expected_name):
+                    seen_ids.add(candidate.id)
+                    matches.append(candidate.id)
 
         return self._require_unique_match(
             matches,
@@ -139,13 +158,30 @@ class ResolveService:
             path=path,
         )
 
+    async def _fetch_entity_by_id(
+        self,
+        entity_id: str,
+        allowed_kinds: list[Kind],
+    ) -> Entity | None:
+        """Load an entity by id; search ignores kind, so filter locally."""
+        normalized_id = str(entity_id).strip()
+        candidates = await self.read_service.get_entities(Entity(id=normalized_id))
+
+        for candidate in candidates:
+            if str(candidate.id).strip() != normalized_id:
+                continue
+            if _kind_matches_allowed(candidate, allowed_kinds):
+                return candidate
+
+        return None
+
     async def _resolve_child_by_relation(
         self,
         entity_type: str,
         parent_id: str,
         relation_name: str,
         expected_name: str,
-        expected_kind: Kind,
+        allowed_kinds: list[Kind],
         active_at: str,
         path: str,
     ) -> str:
@@ -165,15 +201,10 @@ class ResolveService:
                 continue
             seen_ids.add(related_id)
 
-            related_entities = await self.read_service.get_entities(
-                Entity(id=related_id, kind=expected_kind)
-            )
-            if not related_entities:
+            related = await self._fetch_entity_by_id(related_id, allowed_kinds)
+            if not related:
                 continue
 
-            related = related_entities[0]
-            if not _kind_matches(related, expected_kind):
-                continue
             if _entity_name_matches(related, expected_name):
                 matches.append(related_id)
 

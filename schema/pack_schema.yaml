@@ -52,7 +52,9 @@ entities:
     collection: government → president → ministry
     id_field: id
     name_field: name
-    kind: { major: Organisation, minor: Ministry }
+    kind:
+      major: Organisation
+      minors: [cabinetMinister, stateMinister]
     default_ingest: resolve
     parent_relationships:
       - relation: AS_MINISTER
