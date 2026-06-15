@@ -17,6 +17,20 @@ pack:
     meetings: meetings.yaml
     rtis: rtis.yaml
 
+# Record processing order for ingest (create sequence and resolve logging).
+# Separate from tree nesting (pack YAML shape). Every entity type must appear exactly once.
+ingest_order:
+  - government
+  - president
+  - ministry
+  - department
+  - act
+  - meeting
+  - meeting_instance
+  - board
+  - council
+  - rti_document
+
 entities:
   act:
     file: acts
@@ -34,6 +48,19 @@ entities:
     kind: { major: Organisation, minor: government }
     default_ingest: resolve
     resolve_without_active_at: true
+
+  # parent_relationships — allowed tree parent edges (YAML nesting picks exactly one).
+  #
+  # Multiple entries under one entity (e.g. board/council with department and ministry)
+  # declare allowed parent–child relationship types — not "always create every listed edge".
+  #
+  # Which edge to create is determined by where the record is nested in pack YAML:
+  #   council under department: → department --AS_BODY--> council only
+  #   council under ministry:   → ministry --AS_BODY--> council only
+  #
+  # The loader sets context["_tree_parent_type"] to the entity type being recursed from
+  # when entering a nested list. Mapper and resolve use the single entry whose
+  # parent_type matches _tree_parent_type; raise if none match.
 
   president:
     file: organisations
