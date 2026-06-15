@@ -5,22 +5,8 @@ from typing import Any
 from ingestion.models.schema import Entity, Kind, Relation
 from ingestion.pack.errors import ResolveError
 from ingestion.pack.models import IngestRecord, PackState, ResolveContext
-from ingestion.pack.schema_loader import get_entity_config
+from ingestion.pack.schema_loader import PackSchema
 from ingestion.services.read_service import ReadService
-
-RESOLVE_ENTITY_TYPES = ("government", "president", "ministry", "department")
-
-PARENT_PATH_KEY = {
-    "president": "_parent_government_path",
-    "ministry": "_parent_president_path",
-    "department": "_parent_ministry_path",
-}
-
-PARENT_RELATION = {
-    "president": "AS_PRESIDENT",
-    "ministry": "AS_MINISTER",
-    "department": "AS_DEPARTMENT",
-}
 
 
 def _normalize_name(value: str | None) -> str:
@@ -60,25 +46,26 @@ def _resolve_without_active_at(entity_cfg: dict[str, Any]) -> bool:
 
 
 class ResolveService:
-    """Resolve government → president → ministry → department records via ReadService."""
+    """Resolve pack records whose schema default_ingest is resolve via ReadService."""
 
     def __init__(self, read_service: ReadService):
         self.read_service = read_service
 
     async def resolve_pack(self, pack_state: PackState) -> ResolveContext:
         context = pack_state.resolve_context
+        pack_schema = pack_state.pack_schema
         for record in pack_state.records:
             if record.ingest_mode != "resolve":
                 continue
-            if record.entity_type not in RESOLVE_ENTITY_TYPES:
+            if record.entity_type not in pack_schema.resolve_types:
                 continue
-            await self.resolve_record(record, pack_state.schema, context)
+            await self.resolve_record(record, pack_schema, context)
         return context
 
     async def resolve_record(
         self,
         record: IngestRecord,
-        schema: dict[str, Any],
+        pack_schema: PackSchema,
         context: ResolveContext,
     ) -> str:
         entity_type = record.entity_type
@@ -88,10 +75,11 @@ class ResolveService:
                 f"{entity_type} at {record.path} requires 'name' for ingest: resolve"
             )
 
-        entity_cfg = get_entity_config(schema, entity_type)
+        entity_cfg = pack_schema.entity_config(entity_type)
         allowed_kinds = _allowed_kinds_from_config(entity_cfg.get("kind", {}))
+        parent_relationships = entity_cfg.get("parent_relationships") or []
 
-        if entity_type == "government" or _resolve_without_active_at(entity_cfg):
+        if _resolve_without_active_at(entity_cfg) or not parent_relationships:
             entity_id = await self._resolve_root_entity(
                 entity_label=entity_type,
                 expected_name=expected_name,
@@ -99,20 +87,35 @@ class ResolveService:
                 path=record.path,
             )
         else:
-            parent_path_key = PARENT_PATH_KEY[entity_type]
-            parent_path = record.context.get(parent_path_key)
-            if not parent_path:
+            tree_parent_type = record.context.get("_tree_parent_type")
+            if not tree_parent_type:
                 raise ResolveError(
-                    f"{entity_type} at {record.path} is missing parent path '{parent_path_key}'"
+                    f"{entity_type} at {record.path} is missing context '_tree_parent_type'"
                 )
 
-            parent_id = context.get_resolved_id(parent_path)
+            relationship = pack_schema.parent_relationship_for_tree_parent(
+                entity_type, str(tree_parent_type)
+            )
+            parent_id_from = str(relationship.get("parent_id_from", "")).strip()
+            if not parent_id_from:
+                raise ResolveError(
+                    f"{entity_type} at {record.path} has no parent_id_from in schema"
+                )
+
+            parent_id = context.get_parent_id_for_record(record.context, parent_id_from)
             if not parent_id:
+                path_key = parent_id_from.replace("_id", "_path")
+                parent_path = record.context.get(path_key)
                 raise ResolveError(
                     f"{entity_type} at {record.path} requires resolved parent at {parent_path}"
                 )
 
-            relation_name = PARENT_RELATION[entity_type]
+            relation_name = str(relationship.get("relation", "")).strip()
+            if not relation_name:
+                raise ResolveError(
+                    f"{entity_type} at {record.path} has no relation in schema"
+                )
+
             entity_id = await self._resolve_child_by_relation(
                 entity_type=entity_type,
                 parent_id=parent_id,
