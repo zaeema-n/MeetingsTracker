@@ -51,6 +51,24 @@ Mapping rules live in the global schema (not per-ministry):
 schema/pack_schema.yaml
 ```
 
+Ingestion is **schema-driven**: loader, resolve, and mapper read entity types, nesting, processing order, and relationships from this file. Adding a new entity type requires changes there only — not hardcoded Python lists.
+
+### Schema conventions
+
+**YAML key = entity type name.** Nested collection keys in pack files must match entity type names from the schema (e.g. `meeting_instance:`, not `instances:`). Root keys per file: `act`, `meeting`, `rti_document`, `government`, etc.
+
+**`ingest_order`** in `pack_schema.yaml` lists every entity type exactly once. It controls processing order (resolve logging and create sequence), separate from YAML tree nesting.
+
+**Adding a new entity type:**
+
+1. Add an `entities.<type>` block in `schema/pack_schema.yaml` (`file`, `kind`, `default_ingest`, optional `parent_relationships`).
+2. Append `<type>` to `ingest_order`.
+3. Use `<type>:` as the nested YAML key under its parent in the pack data.
+
+**`parent_relationships`** declare *allowed* tree parent edges. Multiple entries (e.g. board under department or ministry) are valid options — YAML nesting picks exactly one via `_tree_parent_type` at ingest time.
+
+**Link field vs entity key collisions.** Cross-reference fields on a record (e.g. `meetings:` on a board) must not use the same name as a nested entity type key on that node. The entity type is `meeting`, so `meetings` as a link field is fine; avoid naming a link field `meeting` on a node that could nest `meeting` children.
+
 Example pack:
 
 ```text
@@ -106,9 +124,28 @@ python -m ingestion.cli.ingest_pack --help
    - **Government** (`Organisation`/`government`) — by name only (root; no date filter)
    - **President, ministry, department** — via parent relationships at `--active-at`
 3. **Create** other entities (acts, meetings, boards, RTIs, etc.) if they do not already exist in OpenGIN.
-4. **Attach parent edges** (e.g. department `AS_BODY` → board) via parent `update_entity` calls after each create.
+4. **Attach parent edges** (e.g. department `AS_BODY` → board) via parent `update_entity` calls after each create. Only the edge matching YAML nesting is created (one parent per nested record).
 
 Create-path entities are matched by pack `id` + OpenGIN `kind`. If an entity already exists, it is skipped (unless `--strict` is set).
+
+### Collection file YAML shape
+
+Acts, meetings, and RTIs use entity-type keys at the root and for nesting:
+
+```yaml
+# acts.yaml
+act:
+  - id: cbsl_act_2023
+    name: ...
+
+# meetings.yaml
+meeting:
+  - id: governing_board_meeting
+    name: ...
+    meeting_instance:
+      - id: GBM_156
+        name: ...
+```
 
 ### Organisation YAML shape
 
@@ -137,10 +174,12 @@ government:
 [INFO] [RESOLVE] government government[0] -> <db-id>
 [INFO] [RESOLVE] president government[0].president[0] -> <db-id>
 [INFO] [RESOLVE] ministry government[0].president[0].ministry[0] -> <db-id>
-[INFO] [DRY-RUN] Would create Organisation/Board cbsl_governing_board at ...
-[INFO] [SKIP] Document/Act cbsl_act_2023 at acts[0] (already in DB)
+[INFO] [RESOLVE] department government[0].president[0].ministry[0].department[0] -> <db-id>
+[INFO] [DRY-RUN] Would create Organisation/board cbsl_governing_board at ...
+[INFO] [DRY-RUN] Would update parent <dept-id> AS_BODY -> cbsl_governing_board
+[INFO] [SKIP] Document/Act cbsl_act_2023 at act[0] (already in DB)
 [INFO] Ingest complete (active_at=2024-11-01, dry_run=True, strict=False)
-[INFO]   resolved: 3
+[INFO]   resolved: 4
 [INFO]   created: 0
 [INFO]   skipped_existing: 1
 [INFO]   dry_run_would_create: 10
