@@ -138,10 +138,24 @@ entities:
 # field: YAML key to read; relation: OpenGIN edge name; target: allowed entity type(s).
 # at: optional scope — entity-type list, or nested container (e.g. sent_to.recipient_id).
 # many: true when the YAML value is a list of ids.
-# "on": child (default) — edge on entity being created (child --relation--> target id).
-#       target — deferred edge on referenced id (target --relation--> child).
-#       Quote the key: YAML 1.1 treats bare `on` as boolean true.
-# Distinct from parent_relationships (YAML tree hierarchy).
+#
+# "on" — which OpenGIN entity record gets the relationship written (default: child).
+#   The YAML field always lives on the record being ingested; "on" only chooses where
+#   the edge is stored in OpenGIN, not where the id is read from.
+#
+#   on: child (default, omit "on" to use this)
+#     Attach the relation when creating the ingested entity (EntityCreate.relationships).
+#     Direction: ingested entity --relation--> target id
+#     Example: board.meetings → create board with has_event edges pointing at meeting ids.
+#
+#   on: target
+#     Create the ingested entity first, then update the referenced target entity
+#     (update_entity on the id from field) to add the relation pointing back at the child.
+#     Direction: target id --relation--> ingested entity
+#     Example: board.mandated_by → create board, then update act with mandates → board.
+#     Quote the key as "on": YAML 1.1 treats bare `on` as boolean true.
+#
+# Distinct from parent_relationships (YAML tree hierarchy; always behaves like on: target).
 links:
   - field: mandated_by
     relation: mandates
