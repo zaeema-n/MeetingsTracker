@@ -1,8 +1,8 @@
-meetings:
+meeting:
   - id: governing_board_meeting
     name: Governing Board Meeting
     mandated_by: cbsl_act_2023
-    instances:
+    meeting_instance:
       - id: GBM_156
         name: 156th Governing Board Meeting
       - id: GBM_157
@@ -11,7 +11,7 @@ meetings:
   - id: monetary_policy_board_meeting
     name: Monetary Policy Board Meeting
     mandated_by: cbsl_act_2023
-    instances:
+    meeting_instance:
       - id: MPB_88
         name: 88th Monetary Policy Board Meeting
       - id: MPB_89

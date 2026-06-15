@@ -34,7 +34,7 @@ ingest_order:
 entities:
   act:
     file: acts
-    collection: acts
+    collection: act
     id_field: id
     name_field: name
     kind: { major: Document, minor: act }
@@ -132,7 +132,7 @@ entities:
 
   meeting:
     file: meetings
-    collection: meetings
+    collection: meeting
     id_field: id
     name_field: name
     kind: { major: Event, minor: meeting }
@@ -140,7 +140,7 @@ entities:
 
   meeting_instance:
     file: meetings
-    collection: meetings → instances
+    collection: meeting → meeting_instance
     id_field: id
     name_field: name
     kind: { major: Event, minor: meetingInstance }
@@ -152,7 +152,7 @@ entities:
 
   rti_document:
     file: rtis
-    collection: rti_documents
+    collection: rti_document
     id_field: id
     name_field: name
     kind: { major: Document, minor: rti }

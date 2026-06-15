@@ -20,7 +20,7 @@ NESTED_KEYS_BY_ENTITY: dict[str, set[str]] = {
     "president": {"ministry"},
     "ministry": {"department"},
     "department": {"board", "council"},
-    "meeting": {"instances"},
+    "meeting": {"meeting_instance"},
 }
 
 META_KEYS = {"ingest"}
@@ -213,17 +213,19 @@ def _load_collection_records(
         _append_record(records, entity_type, item, path, {}, schema)
 
         if entity_type == "meeting":
-            instances = item.get("instances", [])
-            if not instances:
+            meeting_instances = item.get("meeting_instance", [])
+            if not meeting_instances:
                 continue
-            if not isinstance(instances, list):
-                raise PackLoadError(f"{path}.instances must be a list")
+            if not isinstance(meeting_instances, list):
+                raise PackLoadError(f"{path}.meeting_instance must be a list")
 
-            for instance_index, instance in enumerate(instances):
+            for instance_index, instance in enumerate(meeting_instances):
                 if not isinstance(instance, dict):
-                    raise PackLoadError(f"{path}.instances[{instance_index}] must be a mapping")
+                    raise PackLoadError(
+                        f"{path}.meeting_instance[{instance_index}] must be a mapping"
+                    )
 
-                instance_path = f"{path}.instances[{instance_index}]"
+                instance_path = f"{path}.meeting_instance[{instance_index}]"
                 instance_context = {"_parent_meeting_path": path}
                 _append_record(
                     records,
@@ -297,15 +299,15 @@ def load_pack(
 
     acts = raw_files.get("acts", {})
     if isinstance(acts, dict):
-        _load_collection_records(acts, "acts", "act", records, schema, "acts.yaml")
+        _load_collection_records(acts, "act", "act", records, schema, "acts.yaml")
 
     meetings = raw_files.get("meetings", {})
     if isinstance(meetings, dict):
-        _load_collection_records(meetings, "meetings", "meeting", records, schema, "meetings.yaml")
+        _load_collection_records(meetings, "meeting", "meeting", records, schema, "meetings.yaml")
 
     rtis = raw_files.get("rtis", {})
     if isinstance(rtis, dict):
-        _load_collection_records(rtis, "rti_documents", "rti_document", records, schema, "rtis.yaml")
+        _load_collection_records(rtis, "rti_document", "rti_document", records, schema, "rtis.yaml")
 
     resolve_context = ResolveContext(active_at=active_at)
 
