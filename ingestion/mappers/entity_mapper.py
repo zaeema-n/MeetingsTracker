@@ -7,21 +7,7 @@ from ingestion.models.schema import AddRelation, AddRelationValue, EntityCreate,
 from ingestion.mappers.errors import MapError
 from ingestion.mappers.models import MappedEntity, ParentRelationship
 from ingestion.pack.models import IngestRecord, PackState
-from ingestion.pack.schema_loader import get_entity_config
-
-INGEST_ENTITY_TYPES = frozenset(
-    {
-        "president",
-        "ministry",
-        "department",
-        "act",
-        "meeting",
-        "meeting_instance",
-        "board",
-        "council",
-        "rti_document",
-    }
-)
+from ingestion.pack.schema_loader import PackSchema
 
 
 def _normalize_targets(target: str | list[str]) -> list[str]:
@@ -39,7 +25,7 @@ class EntityMapper:
 
     def __init__(self, pack_state: PackState):
         self.pack_state = pack_state
-        self.schema = pack_state.schema
+        self.pack_schema: PackSchema = pack_state.pack_schema
         self.active_at = pack_state.active_at
         self.resolve_context = pack_state.resolve_context
         self.indexes = pack_state.indexes
@@ -50,7 +36,7 @@ class EntityMapper:
                 f"{record.entity_type} at {record.path} uses ingest: resolve and is not mappable"
             )
 
-        entity_cfg = get_entity_config(self.schema, record.entity_type)
+        entity_cfg = self.pack_schema.entity_config(record.entity_type)
         record_id = record.record_id
         if not record_id or not str(record_id).strip():
             id_field = entity_cfg.get("id_field", "id")
@@ -120,27 +106,40 @@ class EntityMapper:
         entity_cfg: dict[str, Any],
         child_id: str,
     ) -> list[ParentRelationship]:
-        parent_relationships: list[ParentRelationship] = []
-        for parent_cfg in entity_cfg.get("parent_relationships", []):
-            parent_id_from = parent_cfg.get("parent_id_from")
-            if not parent_id_from:
-                continue
+        parent_relationships_cfg = entity_cfg.get("parent_relationships") or []
+        if not parent_relationships_cfg:
+            return []
 
-            parent_id = self._resolve_parent_id(record, parent_id_from)
-            relation_name = parent_cfg.get("relation", "")
-            if not relation_name:
-                raise MapError(
-                    f"{record.entity_type} at {record.path}: parent relationship missing 'relation'"
-                )
-
-            parent_relationships.append(
-                ParentRelationship(
-                    parent_id=parent_id,
-                    relation=relation_name,
-                    child_id=child_id,
-                )
+        tree_parent_type = record.context.get("_tree_parent_type")
+        if not tree_parent_type:
+            raise MapError(
+                f"{record.entity_type} at {record.path} is missing context '_tree_parent_type'"
             )
-        return parent_relationships
+
+        parent_cfg = self.pack_schema.parent_relationship_for_tree_parent(
+            record.entity_type, str(tree_parent_type)
+        )
+        parent_id_from = parent_cfg.get("parent_id_from")
+        if not parent_id_from:
+            raise MapError(
+                f"{record.entity_type} at {record.path}: parent relationship missing "
+                "'parent_id_from'"
+            )
+
+        parent_id = self._resolve_parent_id(record, parent_id_from)
+        relation_name = parent_cfg.get("relation", "")
+        if not relation_name:
+            raise MapError(
+                f"{record.entity_type} at {record.path}: parent relationship missing 'relation'"
+            )
+
+        return [
+            ParentRelationship(
+                parent_id=parent_id,
+                relation=relation_name,
+                child_id=child_id,
+            )
+        ]
 
     def _build_link_relationships(
         self, record: IngestRecord, child_id: str
@@ -155,7 +154,7 @@ class EntityMapper:
         """
         child_relationships: list[AddRelation] = []
         deferred_relationships: list[ParentRelationship] = []
-        for rule in self.schema.get("links", []):
+        for rule in self.pack_schema.links:
             ref_values = self._read_link_values(record, rule)
             if not ref_values:
                 continue
@@ -203,7 +202,7 @@ class EntityMapper:
         at = rule.get("at")
         many = rule.get("many", False)
 
-        if isinstance(at, str) and at not in INGEST_ENTITY_TYPES:
+        if isinstance(at, str) and at not in self.pack_schema.entity_types:
             container = record.data.get(at)
             if not isinstance(container, dict):
                 return []
