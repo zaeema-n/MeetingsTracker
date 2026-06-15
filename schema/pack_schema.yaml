@@ -185,22 +185,22 @@ entities:
 # Distinct from parent_relationships (YAML tree hierarchy; always behaves like on: target).
 links:
   - field: mandated_by
-    relation: mandates
+    relation: MANDATES
     target: act
     "on": target
 
   - field: meetings
-    relation: has_event
+    relation: HAS_EVENT
     at: [ministry, department, board, council]
     target: meeting
     many: true
 
   - field: recipient_id
-    relation: sent_to
+    relation: SENT_TO
     at: sent_to
     target: [ministry, department, board, council]
 
   - field: discovered_events
-    relation: discovers
+    relation: DISCOVERS
     target: meeting_instance
     many: true
