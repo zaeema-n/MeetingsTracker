@@ -4,20 +4,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Iterator, Literal
 
-IngestMode = Literal["resolve", "create"]
+from ingestion.pack.schema_loader import PackSchema
 
-INGEST_ORDER: list[str] = [
-    "government",
-    "president",
-    "ministry",
-    "department",
-    "act",
-    "meeting",
-    "meeting_instance",
-    "board",
-    "council",
-    "rti_document",
-]
+IngestMode = Literal["resolve", "create"]
 
 
 @dataclass
@@ -25,46 +14,24 @@ class ResolveContext:
     """Shared resolution state for a single ingest run."""
 
     active_at: str
-    government_id: str | None = None
-    president_id: str | None = None
-    ministry_id: str | None = None
-    department_id: str | None = None
     resolved_by_path: dict[str, str] = field(default_factory=dict)
 
-    def set_resolved_id(self, entity_type: str, entity_id: str) -> None:
-        if entity_type == "government":
-            self.government_id = entity_id
-        elif entity_type == "president":
-            self.president_id = entity_id
-        elif entity_type == "ministry":
-            self.ministry_id = entity_id
-        elif entity_type == "department":
-            self.department_id = entity_id
-
     def register_resolution(self, path: str, entity_type: str, entity_id: str) -> None:
+        """Record an OpenGIN entity id for a resolved pack path."""
         self.resolved_by_path[path] = entity_id
-        self.set_resolved_id(entity_type, entity_id)
 
     def get_resolved_id(self, path: str) -> str | None:
         return self.resolved_by_path.get(path)
 
-    def get_parent_id(self, context_key: str) -> str | None:
-        mapping = {
-            "_parent_government_id": self.government_id,
-            "_parent_president_id": self.president_id,
-            "_parent_ministry_id": self.ministry_id,
-            "_parent_department_id": self.department_id,
-        }
-        return mapping.get(context_key)
-
-    def get_parent_id_for_record(self, record_context: dict[str, Any], context_key: str) -> str | None:
+    def get_parent_id_for_record(
+        self, record_context: dict[str, Any], context_key: str
+    ) -> str | None:
+        """Look up a parent id via the ancestor path stored in record context."""
         path_key = context_key.replace("_id", "_path")
         parent_path = record_context.get(path_key)
         if parent_path:
-            resolved = self.resolved_by_path.get(parent_path)
-            if resolved:
-                return resolved
-        return self.get_parent_id(context_key)
+            return self.resolved_by_path.get(parent_path)
+        return None
 
 
 @dataclass
@@ -89,15 +56,23 @@ class IngestRecord:
 @dataclass
 class PackState:
     pack_dir: Path
-    schema: dict[str, Any]
+    pack_schema: PackSchema
     active_at: str
     raw_files: dict[str, Any]
     records: list[IngestRecord] = field(default_factory=list)
     indexes: dict[str, dict[str, dict]] = field(default_factory=dict)
     resolve_context: ResolveContext = field(default_factory=lambda: ResolveContext(active_at=""))
 
+    @property
+    def schema(self) -> dict[str, Any]:
+        """Raw schema dict for callers not yet migrated to :class:`PackSchema`."""
+        return self.pack_schema.raw
+
     def iter_records(self) -> Iterator[IngestRecord]:
-        order = {entity_type: index for index, entity_type in enumerate(INGEST_ORDER)}
+        order = {
+            entity_type: index
+            for index, entity_type in enumerate(self.pack_schema.ingest_order)
+        }
         yield from sorted(self.records, key=lambda record: order.get(record.entity_type, 999))
 
     def records_by_type(self, entity_type: str) -> list[IngestRecord]:

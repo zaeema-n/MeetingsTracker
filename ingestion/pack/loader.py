@@ -7,11 +7,10 @@ from typing import Any
 import yaml
 
 from ingestion.pack.errors import PackLoadError
-from ingestion.pack.models import INGEST_ORDER, IngestMode, IngestRecord, PackState, ResolveContext
+from ingestion.pack.models import IngestMode, IngestRecord, PackState, ResolveContext
 from ingestion.pack.schema_loader import (
     get_entity_config,
-    load_schema,
-    schema_requires_active_at,
+    load_pack_schema,
 )
 
 # Keys that hold nested entity lists — stripped from parent record `data`
@@ -237,7 +236,9 @@ def _load_collection_records(
                 )
 
 
-def _build_indexes(records: list[IngestRecord]) -> dict[str, dict[str, dict]]:
+def _build_indexes(
+    records: list[IngestRecord], ingest_order: tuple[str, ...]
+) -> dict[str, dict[str, dict]]:
     """
     Build id → record lookups for create-path entities.
 
@@ -245,7 +246,7 @@ def _build_indexes(records: list[IngestRecord]) -> dict[str, dict[str, dict]]:
     have no pack id. Mappers use these indexes to resolve bare-id link fields
     (e.g. mandated_by, meetings, discovered_events) to the correct entity type.
     """
-    indexes: dict[str, dict[str, dict]] = {entity_type: {} for entity_type in INGEST_ORDER}
+    indexes: dict[str, dict[str, dict]] = {entity_type: {} for entity_type in ingest_order}
 
     for record in records:
         if record.ingest_mode != "create":
@@ -278,11 +279,12 @@ def load_pack(
     if not active_at:
         raise PackLoadError("active_at is required")
 
-    schema = load_schema(schema_path)
-    if schema_requires_active_at(schema) and not active_at:
+    pack_schema = load_pack_schema(schema_path)
+    if pack_schema.requires_active_at() and not active_at:
         raise PackLoadError("pack schema requires --active-at")
 
-    files_cfg = schema["pack"]["files"]
+    files_cfg = pack_schema.files
+    schema = pack_schema.raw
     raw_files: dict[str, Any] = {}
     records: list[IngestRecord] = []
 
@@ -313,10 +315,10 @@ def load_pack(
 
     return PackState(
         pack_dir=pack_dir,
-        schema=schema,
+        pack_schema=pack_schema,
         active_at=active_at,
         raw_files=raw_files,
         records=records,
-        indexes=_build_indexes(records),
+        indexes=_build_indexes(records, pack_schema.ingest_order),
         resolve_context=resolve_context,
     )
