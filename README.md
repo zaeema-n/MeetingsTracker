@@ -197,13 +197,3 @@ government:
 | `HTTP client not initialized` | Internal error — report if seen after a normal CLI run |
 
 Resolve requires the government root in OpenGIN (by name), then president/ministry/department reachable via `AS_PRESIDENT` / `AS_MINISTER` / `AS_DEPARTMENT` at the given date. Create-path entities need stable pack `id` values that match OpenGIN entity ids when re-ingesting.
-
-## Optional: validate pack YAML
-
-To check link references offline (no API calls):
-
-```bash
-python validate_pack.py "data/Minister of Finance, Planning and Economic Development"
-```
-
-This is separate from ingest and uses the older per-pack validation flow.
