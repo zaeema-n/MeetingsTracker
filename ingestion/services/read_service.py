@@ -43,6 +43,10 @@ class ReadService:
     The OpenGINService directly interfaces with the OpenGIN APIs to retrieve data.
     """
 
+    def __init__(self):
+        if not READ_BASE_URL:
+            raise ValueError("READ_BASE_URL environment variable is not set")
+
     @property
     def session(self) -> ClientSession:
         return http_client.session

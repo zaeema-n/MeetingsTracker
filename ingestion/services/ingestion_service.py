@@ -41,6 +41,10 @@ api_retry_decorator = retry_async.AsyncRetry(
 
 class IngestionService:
 
+    def __init__(self):
+        if not INGESTION_BASE_URL:
+            raise ValueError("INGESTION_BASE_URL environment variable is not set")
+
     @property
     def session(self) -> ClientSession:
         return http_client.session
