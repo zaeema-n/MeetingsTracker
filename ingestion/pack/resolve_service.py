@@ -41,6 +41,23 @@ def _entity_name_matches(entity: Entity, expected_name: str) -> bool:
     return _normalize_name(entity.name) == expected_name
 
 
+def _collect_entity_ids_by_exact_name(
+    candidates: list[Entity],
+    expected_name: str,
+    allowed_kinds: list[Kind],
+) -> list[str]:
+    """Keep entities whose decoded name exactly matches (search API is partial)."""
+    matches: list[str] = []
+    seen_ids: set[str] = set()
+    for candidate in candidates:
+        if not candidate.id or candidate.id in seen_ids:
+            continue
+        if _entity_name_matches(candidate, expected_name):
+            seen_ids.add(candidate.id)
+            matches.append(candidate.id)
+    return matches
+
+
 def _resolve_without_active_at(entity_cfg: dict[str, Any]) -> bool:
     return bool(entity_cfg.get("resolve_without_active_at", False))
 
@@ -129,6 +146,22 @@ class ResolveService:
         context.register_resolution(record.path, entity_type, entity_id)
         return entity_id
 
+    async def _search_entity_ids_by_exact_name(
+        self,
+        expected_name: str,
+        allowed_kinds: list[Kind],
+    ) -> list[str]:
+        candidates: list[Entity] = []
+        for kind in allowed_kinds:
+            candidates.extend(
+                await self.read_service.get_entities(
+                    Entity(name=expected_name, kind=kind)
+                )
+            )
+        return _collect_entity_ids_by_exact_name(
+            candidates, expected_name, allowed_kinds
+        )
+
     async def _resolve_root_entity(
         self,
         *,
@@ -138,21 +171,9 @@ class ResolveService:
         path: str,
     ) -> str:
         """Resolve a root entity by name and kind only (no active-at filtering)."""
-        matches: list[str] = []
-        seen_ids: set[str] = set()
-
-        for kind in allowed_kinds:
-            candidates = await self.read_service.get_entities(
-                Entity(name=expected_name, kind=kind)
-            )
-            for candidate in candidates:
-                if not candidate.id or candidate.id in seen_ids:
-                    continue
-                if not _kind_matches_allowed(candidate, allowed_kinds):
-                    continue
-                if _entity_name_matches(candidate, expected_name):
-                    seen_ids.add(candidate.id)
-                    matches.append(candidate.id)
+        matches = await self._search_entity_ids_by_exact_name(
+            expected_name, allowed_kinds
+        )
 
         return self._require_unique_match(
             matches,
@@ -160,23 +181,6 @@ class ResolveService:
             name=expected_name,
             path=path,
         )
-
-    async def _fetch_entity_by_id(
-        self,
-        entity_id: str,
-        allowed_kinds: list[Kind],
-    ) -> Entity | None:
-        """Load an entity by id; search ignores kind, so filter locally."""
-        normalized_id = str(entity_id).strip()
-        candidates = await self.read_service.get_entities(Entity(id=normalized_id))
-
-        for candidate in candidates:
-            if str(candidate.id).strip() != normalized_id:
-                continue
-            if _kind_matches_allowed(candidate, allowed_kinds):
-                return candidate
-
-        return None
 
     async def _resolve_child_by_relation(
         self,
@@ -196,20 +200,18 @@ class ResolveService:
             ),
         )
 
-        matches: list[str] = []
-        seen_ids: set[str] = set()
-        for relation in relations:
-            related_id = str(relation.relatedEntityId or "").strip()
-            if not related_id or related_id in seen_ids:
-                continue
-            seen_ids.add(related_id)
+        related_ids = {
+            related_id
+            for relation in relations
+            if (related_id := str(relation.relatedEntityId or "").strip())
+        }
 
-            related = await self._fetch_entity_by_id(related_id, allowed_kinds)
-            if not related:
-                continue
-
-            if _entity_name_matches(related, expected_name):
-                matches.append(related_id)
+        name_match_ids = await self._search_entity_ids_by_exact_name(
+            expected_name, allowed_kinds
+        )
+        matches = [
+            entity_id for entity_id in name_match_ids if entity_id in related_ids
+        ]
 
         return self._require_unique_match(
             matches,

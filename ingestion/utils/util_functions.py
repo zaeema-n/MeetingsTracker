@@ -44,7 +44,7 @@ class Util:
         return decoded if decoded != "Unknown" else stripped
 
     @staticmethod
-    def validate_tabular_dataset(data_content: dict) -> bool:
+    def validate_and_sanitize_tabular_dataset(data_content: dict) -> bool:
         """
         Validate the structure of a dataset JSON content.
         
