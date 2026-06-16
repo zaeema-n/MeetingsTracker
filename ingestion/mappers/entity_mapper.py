@@ -191,6 +191,7 @@ class EntityMapper:
 
         Uses rule['field'] and optional rule['at'] to locate the YAML value:
         - no at: read record.data[field]
+        - at is an entity-type string: only when record.entity_type matches
         - at is an entity-type list: only when record.entity_type is listed
         - at is a container name (e.g. sent_to): read record.data[at][field]
 
@@ -202,11 +203,16 @@ class EntityMapper:
         at = rule.get("at")
         many = rule.get("many", False)
 
-        if isinstance(at, str) and at not in self.pack_schema.entity_types:
-            container = record.data.get(at)
-            if not isinstance(container, dict):
-                return []
-            raw_value = container.get(field)
+        if isinstance(at, str):
+            if at in self.pack_schema.entity_types:
+                if record.entity_type != at:
+                    return []
+                raw_value = record.data.get(field)
+            else:
+                container = record.data.get(at)
+                if not isinstance(container, dict):
+                    return []
+                raw_value = container.get(field)
         elif isinstance(at, list):
             if record.entity_type not in at:
                 return []
