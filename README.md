@@ -18,7 +18,7 @@ source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-Configure API URLs. Copy the template and edit as needed:
+Configure API URLs. Copy the env template and edit as needed:
 
 ```bash
 cp ingestion/.env.template .env

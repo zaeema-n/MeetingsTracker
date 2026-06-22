@@ -9,9 +9,9 @@ rti_document:
       - GBM_157
 
   - id: rti_monetary_policy
-    name: RTI Request - Monetary Policy
+    name: RTI Request - Monetary Policy Council
     sent_to:
-      recipient_id: cbsl_monetary_policy_board
+      recipient_id: cbsl_monetary_policy_council
     summary: Response received detailing policy review schedule.
     discovered_events:
       - MPB_88

@@ -17,8 +17,8 @@ government:
                     meetings:
                       - governing_board_meeting
                 council:
-                  - id: cbsl_monetary_policy_board
-                    name: CBSL Monetary Policy Board
+                  - id: cbsl_monetary_policy_council
+                    name: CBSL Monetary Policy Council
                     mandated_by: cbsl_act_2023
                     meetings:
-                      - monetary_policy_board_meeting
+                      - monetary_policy_council_meeting
