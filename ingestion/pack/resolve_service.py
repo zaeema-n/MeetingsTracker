@@ -40,8 +40,7 @@ def _entity_name_matches(entity: Entity, expected_name: str) -> bool:
 
 def _collect_entity_ids_by_exact_name(
     candidates: list[Entity],
-    expected_name: str,
-    allowed_kinds: list[Kind],
+    expected_name: str
 ) -> list[str]:
     """Keep entities whose decoded name exactly matches (search API is partial)."""
     matches: list[str] = []

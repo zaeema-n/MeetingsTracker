@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, Literal
 
 class Kind(BaseModel):
     """Kind refers to the type of entity in the OpenGIN Specification"""
@@ -53,4 +53,12 @@ class EntityCreate(BaseModel):
     metadata: list[Dict[str, Any]] = []
     attributes: list[Dict[str, Any]] = []
     relationships: list[AddRelation] = []
+
+class AttributeFilterRecord(BaseModel):
+    field_name: str
+    operator: Literal["eq", "neq", "gt", "lt", "gte", "lte", "contains", "notcontains"] = "eq"
+    value: str
+
+class AttributeFilterRecords(BaseModel):
+    records: list[AttributeFilterRecord]
     

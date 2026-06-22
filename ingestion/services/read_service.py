@@ -3,7 +3,7 @@ from ingestion.utils.util_functions import Util
 from aiohttp import ClientSession
 import os
 from dotenv import load_dotenv
-from ingestion.models.schema import Entity, Relation
+from ingestion.models.schema import Entity, Relation, AttributeFilterRecords
 from google.api_core import retry_async
 from ingestion.utils.response_handler import handle_api_response
 from ingestion.exceptions.exceptions import (
@@ -111,7 +111,8 @@ class ReadService:
         attributeName: str, 
         startTime: str = None, 
         endTime: str = None, 
-        fields: list = None
+        fields: list[str] | None = None,
+        filters: AttributeFilterRecords | None = None,
     ):
 
         if not entityId or not attributeName:
@@ -127,9 +128,10 @@ class ReadService:
         
         url = f"{READ_BASE_URL}/v1/entities/{stripped_entity_id}/attributes/{stripped_attribute_name}"
         headers = {"Content-Type": "application/json"}
+        payload = filters.model_dump(mode="json") if filters else {}
+        params: dict[str, str | list[str]] = {}
         
         # Build query parameters
-        params = {}
         if startTime:
             params["startTime"] = startTime
         if endTime:
@@ -138,6 +140,6 @@ class ReadService:
             # Handle array query parameter - aiohttp expects it as a list
             params["fields"] = fields
 
-        async with self.session.get(url, headers=headers, params=params) as response:
+        async with self.session.post(url, json=payload,headers=headers, params=params) as response:
             data = await handle_api_response(response, error_prefix="Failed to get entity attribute")
             return data
