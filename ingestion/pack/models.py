@@ -16,7 +16,7 @@ class ResolveContext:
     active_at: str
     resolved_by_path: dict[str, str] = field(default_factory=dict)
 
-    def register_resolution(self, path: str, entity_type: str, entity_id: str) -> None:
+    def register_resolution(self, path: str, entity_id: str) -> None:
         """Record an OpenGIN entity id for a resolved pack path."""
         self.resolved_by_path[path] = entity_id
 

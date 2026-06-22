@@ -7,10 +7,7 @@ from ingestion.pack.errors import ResolveError
 from ingestion.pack.models import IngestRecord, PackState, ResolveContext
 from ingestion.pack.schema_loader import PackSchema
 from ingestion.services.read_service import ReadService
-
-
-def _normalize_name(value: str | None) -> str:
-    return str(value or "").strip()
+from ingestion.utils.util_functions import Util
 
 
 def _allowed_kinds_from_config(kind_cfg: dict[str, Any]) -> list[Kind]:
@@ -38,7 +35,7 @@ def _kind_matches_allowed(entity: Entity, allowed_kinds: list[Kind]) -> bool:
 
 
 def _entity_name_matches(entity: Entity, expected_name: str) -> bool:
-    return _normalize_name(entity.name) == expected_name
+    return Util.normalize_name(entity.name) == expected_name
 
 
 def _collect_entity_ids_by_exact_name(
@@ -86,7 +83,7 @@ class ResolveService:
         context: ResolveContext,
     ) -> str:
         entity_type = record.entity_type
-        expected_name = _normalize_name(record.name)
+        expected_name = Util.normalize_name(record.name)
         if not expected_name:
             raise ResolveError(
                 f"{entity_type} at {record.path} requires 'name' for ingest: resolve"

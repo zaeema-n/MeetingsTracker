@@ -69,7 +69,7 @@ def _append_record(
     path: str,
     context: dict[str, Any],
     pack_schema: PackSchema,
-) -> IngestMode:
+) -> None:
     mode = _ingest_mode(node, entity_type, pack_schema)
     _require_id_if_create(entity_type, node, mode, path, pack_schema)
     records.append(
@@ -81,7 +81,6 @@ def _append_record(
             context=deepcopy(context),
         )
     )
-    return mode
 
 
 def _walk_entity_list(

@@ -33,6 +33,11 @@ class Util:
                 return "Unknown"
 
     @staticmethod
+    def normalize_name(value: str | None) -> str:
+        """Strip and coerce a name value to a plain string for comparison."""
+        return str(value or "").strip()
+
+    @staticmethod
     def decode_search_entity_name(name: str) -> str:
         """Decode entity name from search API; pass through plain text unchanged."""
         stripped = str(name or "").strip()
