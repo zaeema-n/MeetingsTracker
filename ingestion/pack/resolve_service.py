@@ -154,9 +154,7 @@ class ResolveService:
                     Entity(name=expected_name, kind=kind)
                 )
             )
-        return _collect_entity_ids_by_exact_name(
-            candidates, expected_name, allowed_kinds
-        )
+        return _collect_entity_ids_by_exact_name(candidates, expected_name)
 
     async def _resolve_root_entity(
         self,
