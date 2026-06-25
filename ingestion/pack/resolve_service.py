@@ -139,7 +139,7 @@ class ResolveService:
                 path=record.path,
             )
 
-        context.register_resolution(record.path, entity_type, entity_id)
+        context.register_resolution(record.path, entity_id)
         return entity_id
 
     async def _search_entity_ids_by_exact_name(
