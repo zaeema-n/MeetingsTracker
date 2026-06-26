@@ -1,0 +1,24 @@
+government:
+  - name: Government of Sri Lanka
+    ingest: resolve
+    president:
+      - name: Anura Kumara Dissanayake
+        ingest: resolve
+        ministry:
+          - name: Minister of Finance, Planning and Economic Development
+            ingest: resolve
+            department:
+              - name: Central Bank of Sri Lanka
+                ingest: resolve
+                board:
+                  - id: cbsl_governing_board
+                    name: CBSL Governing Board
+                    mandated_by: cbsl_act_2023
+                    meetings:
+                      - governing_board_meeting
+                council:
+                  - id: cbsl_monetary_policy_council
+                    name: CBSL Monetary Policy Council
+                    mandated_by: cbsl_act_2023
+                    meetings:
+                      - monetary_policy_council_meeting

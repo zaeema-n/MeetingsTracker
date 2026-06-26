@@ -1,0 +1,18 @@
+rti_document:
+  - id: rti_governing_board
+    name: RTI Request - Governing Board
+    sent_to:
+      recipient_id: cbsl_governing_board
+    summary: Response received detailing board meeting schedule.
+    discovered_events:
+      - GBM_156
+      - GBM_157
+
+  - id: rti_monetary_policy
+    name: RTI Request - Monetary Policy Council
+    sent_to:
+      recipient_id: cbsl_monetary_policy_council
+    summary: Response received detailing policy review schedule.
+    discovered_events:
+      - MPB_88
+      - MPB_89

@@ -1,0 +1,206 @@
+# MeetingsTracker — global ministry pack schema
+# Same layout for every ministry folder under data/. Drives OpenGIN ingestion mapping.
+
+version: 1
+
+overview: |
+  One ministry's dataset under data/<Ministry name>/. Government (Organisation/government)
+  is the root; president (Person/citizen) is resolved under government at --active-at.
+  Boards/councils and other files are created with explicit ids.
+  Meetings hold types and instances. RTIs record requests and what they discovered.
+
+pack:
+  requires_active_at: true
+  files:
+    acts: acts.yaml
+    organisations: organisations.yaml
+    meetings: meetings.yaml
+    rtis: rtis.yaml
+
+# Record processing order for ingest (create sequence and resolve logging).
+# Separate from tree nesting (pack YAML shape). Every entity type must appear exactly once.
+ingest_order:
+  - government
+  - president
+  - ministry
+  - department
+  - act
+  - meeting
+  - meeting_instance
+  - board
+  - council
+  - rti_document
+
+entities:
+  act:
+    file: acts
+    collection: act
+    id_field: id
+    name_field: name
+    kind: { major: Document, minor: act }
+    default_ingest: create
+
+  government:
+    file: organisations
+    collection: government
+    id_field: id
+    name_field: name
+    kind: { major: Organisation, minor: government }
+    default_ingest: resolve
+    resolve_without_active_at: true
+
+  # parent_relationships — allowed tree parent edges (YAML nesting picks exactly one).
+  #
+  # Multiple entries under one entity (e.g. board/council with department and ministry)
+  # declare allowed parent–child relationship types — not "always create every listed edge".
+  #
+  # Which edge to create is determined by where the record is nested in pack YAML:
+  #   council under department: → department --AS_BODY--> council only
+  #   council under ministry:   → ministry --AS_BODY--> council only
+  #
+  # The loader sets context["_tree_parent_type"] to the entity type being recursed from
+  # when entering a nested list. Mapper and resolve use the single entry whose
+  # parent_type matches _tree_parent_type; raise if none match.
+
+  president:
+    file: organisations
+    collection: government → president
+    id_field: id
+    name_field: name
+    kind: { major: Person, minor: citizen }
+    default_ingest: resolve
+    parent_relationships:
+      - relation: AS_PRESIDENT
+        parent_type: government
+        parent_id_from: _parent_government_id
+
+  ministry:
+    file: organisations
+    collection: government → president → ministry
+    id_field: id
+    name_field: name
+    kind:
+      major: Organisation
+      minors: [cabinetMinister, stateMinister]
+    default_ingest: resolve
+    parent_relationships:
+      - relation: AS_MINISTER
+        parent_type: president
+        parent_id_from: _parent_president_id
+
+  department:
+    file: organisations
+    collection: government → president → ministry → department
+    id_field: id
+    name_field: name
+    kind: { major: Organisation, minor: department }
+    default_ingest: resolve
+    parent_relationships:
+      - relation: AS_DEPARTMENT
+        parent_type: ministry
+        parent_id_from: _parent_ministry_id
+
+  board:
+    file: organisations
+    collection: government → president → ministry → department → board or government → president → ministry  → board
+    default_ingest: create
+    id_field: id
+    name_field: name
+    kind: { major: Organisation, minor: board }
+    parent_relationships:
+      - relation: AS_BODY
+        parent_type: department
+        parent_id_from: _parent_department_id
+      - relation: AS_BODY
+        parent_type: ministry
+        parent_id_from: _parent_ministry_id
+
+  council:
+    file: organisations
+    collection: government → president → ministry → department → council or government → president → ministry → council
+    default_ingest: create
+    id_field: id
+    name_field: name
+    kind: { major: Organisation, minor: council }
+    parent_relationships:
+      - relation: AS_BODY
+        parent_type: department
+        parent_id_from: _parent_department_id
+      - relation: AS_BODY
+        parent_type: ministry
+        parent_id_from: _parent_ministry_id
+
+  meeting:
+    file: meetings
+    collection: meeting
+    id_field: id
+    name_field: name
+    kind: { major: Event, minor: meeting }
+    default_ingest: create
+
+  meeting_instance:
+    file: meetings
+    collection: meeting → meeting_instance
+    id_field: id
+    name_field: name
+    kind: { major: Event, minor: meetingInstance }
+    default_ingest: create
+    parent_relationships:
+      - relation: HAS_EVENT
+        parent_type: meeting
+        parent_id_from: _parent_meeting_id
+
+  rti_document:
+    file: rtis
+    collection: rti_document
+    id_field: id
+    name_field: name
+    kind: { major: Document, minor: rti }
+    default_ingest: create
+    # attributes:
+    #   - key: summary
+    #     source: summary
+
+# Cross-file reference links: YAML field names → OpenGIN relation names.
+# field: YAML key to read; relation: OpenGIN edge name; target: allowed entity type(s).
+# at: optional scope — entity-type list, or nested container (e.g. sent_to.recipient_id).
+# many: true when the YAML value is a list of ids.
+#
+# "on" — which OpenGIN entity record gets the relationship written (default: child).
+#   The YAML field always lives on the record being ingested; "on" only chooses where
+#   the edge is stored in OpenGIN, not where the id is read from.
+#
+#   on: child (default, omit "on" to use this)
+#     Attach the relation when creating the ingested entity (EntityCreate.relationships).
+#     Direction: ingested entity --relation--> target id
+#     Example: board.meetings → create board with has_event edges pointing at meeting ids.
+#
+#   on: target
+#     Create the ingested entity first, then update the referenced target entity
+#     (update_entity on the id from field) to add the relation pointing back at the child.
+#     Direction: target id --relation--> ingested entity
+#     Example: board.mandated_by → create board, then update act with mandates → board.
+#     Quote the key as "on": YAML 1.1 treats bare `on` as boolean true.
+#
+# Distinct from parent_relationships (YAML tree hierarchy; always behaves like on: target).
+links:
+  - field: mandated_by
+    relation: MANDATES
+    target: act
+    "on": target
+
+  - field: meetings
+    relation: HAS_EVENT
+    at: [ministry, department, board, council]
+    target: meeting
+    many: true
+
+  - field: recipient_id
+    relation: SENT_TO
+    at: sent_to
+    target: [ministry, department, board, council]
+
+  - field: discovered_events
+    relation: DISCOVERS
+    target: meeting_instance
+    many: true
