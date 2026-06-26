@@ -102,7 +102,7 @@ entities:
 
   board:
     file: organisations
-    collection: government → president → ministry → department → board
+    collection: government → president → ministry → department → board or government → president → ministry  → board
     default_ingest: create
     id_field: id
     name_field: name
@@ -117,7 +117,7 @@ entities:
 
   council:
     file: organisations
-    collection: government → president → ministry → department → council
+    collection: government → president → ministry → department → council or government → president → ministry → council
     default_ingest: create
     id_field: id
     name_field: name
