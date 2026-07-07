@@ -69,7 +69,7 @@ class ReadService:
                     )
                 result.append(entity)
             return result
-    
+
     @api_retry_decorator
     async def fetch_relations(self, entityId: str, relation: Relation):
         if not entityId or not relation:
