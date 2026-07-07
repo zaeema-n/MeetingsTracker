@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 
 
 @dataclass
-class IngestResult:
+class GraphIngestResult:
     active_at: str
     dry_run: bool
     strict: bool
@@ -28,5 +28,5 @@ class MetadataIngestResult:
 
 @dataclass
 class PhaseRunResult:
-    graph: IngestResult | None = None
+    graph: GraphIngestResult | None = None
     metadata: MetadataIngestResult | None = None

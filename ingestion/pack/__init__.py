@@ -1,5 +1,5 @@
 from ingestion.pack.errors import PackLoadError, PackSchemaError, ResolveError
-from ingestion.pack.loader import load_pack
+from ingestion.pack.graph_loader import load_graph_pack
 from ingestion.pack.metadata_loader import load_metadata_files
 from ingestion.pack.models import IngestRecord, MetadataDocument, PackState, ResolveContext
 from ingestion.pack.resolve_service import ResolveService
@@ -16,7 +16,7 @@ __all__ = [
     "ResolveContext",
     "ResolveError",
     "ResolveService",
-    "load_pack",
+    "load_graph_pack",
     "load_metadata_files",
     "load_pack_schema",
     "load_schema",

@@ -6,8 +6,8 @@ from ingestion.mappers import EntityMapper
 from ingestion.mappers.models import MappedEntity
 from ingestion.models.schema import Entity, Kind
 from ingestion.orchestrator.errors import IngestStrictError
-from ingestion.orchestrator.models import IngestResult
-from ingestion.pack import ResolveService, load_pack
+from ingestion.orchestrator.models import GraphIngestResult
+from ingestion.pack import ResolveService, load_graph_pack
 from ingestion.pack.errors import PackLoadError, ResolveError
 from ingestion.pack.models import IngestRecord, PackState
 from ingestion.services.ingestion_service import IngestionService
@@ -19,8 +19,8 @@ def _kind_label(kind: Kind) -> str:
     return f"{kind.major}/{kind.minor}"
 
 
-class IngestRunner:
-    """Orchestrate resolve + create ingest for a ministry pack."""
+class GraphIngestRunner:
+    """Orchestrate resolve + create graph ingest for a ministry pack."""
 
     def __init__(
         self,
@@ -39,20 +39,24 @@ class IngestRunner:
         schema_path: Path | None = None,
         dry_run: bool = False,
         strict: bool = False,
-    ) -> IngestResult:
+    ) -> GraphIngestResult:
         active_at = str(active_at).strip()
         if not active_at:
             raise PackLoadError("active_at is required")
 
-        pack_state = load_pack(pack_dir, active_at=active_at, schema_path=schema_path)
-        result = IngestResult(
+        pack_state = load_graph_pack(
+            pack_dir,
+            active_at=active_at,
+            schema_path=schema_path,
+        )
+        result = GraphIngestResult(
             active_at=active_at,
             dry_run=dry_run,
             strict=strict,
         )
 
         logger.info(
-            "Starting ingest for %s (active_at=%s, dry_run=%s, strict=%s)",
+            "Starting graph ingest for %s (active_at=%s, dry_run=%s, strict=%s)",
             pack_state.pack_dir,
             active_at,
             dry_run,
@@ -96,7 +100,7 @@ class IngestRunner:
         record: IngestRecord,
         pack_state: PackState,
         mapper: EntityMapper,
-        result: IngestResult,
+        result: GraphIngestResult,
         dry_run: bool,
         strict: bool,
     ) -> None:
@@ -148,7 +152,7 @@ class IngestRunner:
         self,
         mapper: EntityMapper,
         mapped: MappedEntity,
-        result: IngestResult,
+        result: GraphIngestResult,
     ) -> None:
         for parent_relationship in mapped.parent_relationships:
             parent_update = mapper.parent_entity_update(parent_relationship)
@@ -167,7 +171,7 @@ class IngestRunner:
     def _log_dry_run_parent_updates(
         self,
         mapped: MappedEntity,
-        result: IngestResult,
+        result: GraphIngestResult,
     ) -> None:
         for parent_relationship in mapped.parent_relationships:
             result.dry_run_would_update_parent += 1
@@ -178,9 +182,9 @@ class IngestRunner:
                 parent_relationship.child_id,
             )
 
-    def _log_summary(self, result: IngestResult) -> None:
+    def _log_summary(self, result: GraphIngestResult) -> None:
         logger.success(
-            "Ingest complete (active_at=%s, dry_run=%s, strict=%s)",
+            "Graph ingest complete (active_at=%s, dry_run=%s, strict=%s)",
             result.active_at,
             result.dry_run,
             result.strict,

@@ -9,7 +9,12 @@ import sys
 from pathlib import Path
 
 from ingestion.mappers.errors import MapError
-from ingestion.orchestrator import IngestRunner, IngestStrictError, MetadataIngestRunner, PhaseRunResult
+from ingestion.orchestrator import (
+    GraphIngestRunner,
+    IngestStrictError,
+    MetadataIngestRunner,
+    PhaseRunResult,
+)
 from ingestion.pack.errors import PackLoadError, PackSchemaError, ResolveError
 from ingestion.pack.schema_loader import DEFAULT_SCHEMA_PATH
 from ingestion.utils.http_client import http_client
@@ -64,7 +69,7 @@ async def run_ingest(args: argparse.Namespace) -> int:
     try:
         phase_results = PhaseRunResult()
         if not args.metadata_only:
-            runner = IngestRunner()
+            runner = GraphIngestRunner()
             phase_results.graph = await runner.run(
                 args.pack_dir,
                 active_at=args.active_at,
@@ -74,8 +79,8 @@ async def run_ingest(args: argparse.Namespace) -> int:
             )
 
         if not args.graph_only:
-            metadata_runner = MetadataIngestRunner()
-            phase_results.metadata = await metadata_runner.run(
+            metadata_ingest_runner = MetadataIngestRunner()
+            phase_results.metadata = await metadata_ingest_runner.run(
                 args.pack_dir,
                 dry_run=args.dry_run,
             )

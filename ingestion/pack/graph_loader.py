@@ -155,7 +155,7 @@ def _build_indexes(
     records: list[IngestRecord], ingest_order: tuple[str, ...]
 ) -> dict[str, dict[str, dict]]:
     """
-    Build id → record lookups for create-path entities.
+    Build id -> record lookups for create-path entities.
 
     Resolve records (government, president, ministry, department) are skipped because they
     have no pack id. Mappers use these indexes to resolve bare-id link fields
@@ -173,13 +173,13 @@ def _build_indexes(
     return indexes
 
 
-def load_pack(
+def load_graph_pack(
     pack_dir: Path,
     active_at: str,
     schema_path: Path | None = None,
 ) -> PackState:
     """
-    Load a ministry pack directory and produce ingest records with resolve/create modes.
+    Load a ministry graph pack directory and produce ingest records with resolve/create modes.
 
     Args:
         pack_dir: Path to data/<Ministry name>/ containing acts, organisations, meetings, rtis.

@@ -1,12 +1,12 @@
 from ingestion.orchestrator.errors import IngestStrictError
-from ingestion.orchestrator.ingest_runner import IngestRunner
-from ingestion.orchestrator.metadata_runner import MetadataIngestRunner
-from ingestion.orchestrator.models import IngestResult, MetadataIngestResult, PhaseRunResult
+from ingestion.orchestrator.graph_ingest_runner import GraphIngestRunner
+from ingestion.orchestrator.metadata_ingest_runner import MetadataIngestRunner
+from ingestion.orchestrator.models import GraphIngestResult, MetadataIngestResult, PhaseRunResult
 
 __all__ = [
-    "IngestRunner",
+    "GraphIngestRunner",
     "MetadataIngestRunner",
-    "IngestResult",
+    "GraphIngestResult",
     "MetadataIngestResult",
     "PhaseRunResult",
     "IngestStrictError",
