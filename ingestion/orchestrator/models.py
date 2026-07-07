@@ -15,3 +15,12 @@ class IngestResult:
     parent_updates: int = 0
     dry_run_would_update_parent: int = 0
     errors: list[str] = field(default_factory=list)
+
+
+@dataclass
+class MetadataIngestResult:
+    dry_run: bool
+    metadata_updates: int = 0
+    dry_run_would_update_metadata: int = 0
+    skipped_not_found: int = 0
+    errors: list[str] = field(default_factory=list)

@@ -103,7 +103,9 @@ class IngestRunner:
         mapped = mapper.map_record(record)
         entity = mapped.entity
         kind_label = _kind_label(entity.kind)
-        exists = await self._entity_exists(entity.id)
+        normalized_id = str(entity.id).strip()
+        candidates = await self.read_service.get_entities(Entity(id=normalized_id))
+        exists = any(str(candidate.id).strip() == normalized_id for candidate in candidates)
 
         if exists:
             if strict:
@@ -141,11 +143,6 @@ class IngestRunner:
         )
 
         await self._apply_parent_relationships(mapper, mapped, result)
-
-    async def _entity_exists(self, entity_id: str) -> bool:
-        normalized_id = str(entity_id).strip()
-        candidates = await self.read_service.get_entities(Entity(id=normalized_id))
-        return any(str(candidate.id).strip() == normalized_id for candidate in candidates)
 
     async def _apply_parent_relationships(
         self,
