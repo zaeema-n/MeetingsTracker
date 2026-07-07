@@ -9,7 +9,7 @@ import sys
 from pathlib import Path
 
 from ingestion.mappers.errors import MapError
-from ingestion.orchestrator import IngestRunner, IngestStrictError, MetadataIngestRunner
+from ingestion.orchestrator import IngestRunner, IngestStrictError, MetadataIngestRunner, PhaseRunResult
 from ingestion.pack.errors import PackLoadError, PackSchemaError, ResolveError
 from ingestion.pack.schema_loader import DEFAULT_SCHEMA_PATH
 from ingestion.utils.http_client import http_client
@@ -62,9 +62,10 @@ def build_parser() -> argparse.ArgumentParser:
 async def run_ingest(args: argparse.Namespace) -> int:
     await http_client.start()
     try:
+        phase_results = PhaseRunResult()
         if not args.metadata_only:
             runner = IngestRunner()
-            await runner.run(
+            phase_results.graph = await runner.run(
                 args.pack_dir,
                 active_at=args.active_at,
                 schema_path=args.schema,
@@ -74,13 +75,56 @@ async def run_ingest(args: argparse.Namespace) -> int:
 
         if not args.graph_only:
             metadata_runner = MetadataIngestRunner()
-            await metadata_runner.run(
+            phase_results.metadata = await metadata_runner.run(
                 args.pack_dir,
                 dry_run=args.dry_run,
             )
+
+        _log_phase_results(phase_results)
         return 0
     finally:
         await http_client.close()
+
+
+def _log_phase_results(results: PhaseRunResult) -> None:
+    if results.graph is not None:
+        logger.success(
+            "Graph ingest totals (active_at=%s, dry_run=%s, strict=%s)",
+            results.graph.active_at,
+            results.graph.dry_run,
+            results.graph.strict,
+        )
+        logger.success("  resolved: %s", results.graph.resolved)
+        logger.success("  created: %s", results.graph.created)
+        logger.success("  skipped_existing: %s", results.graph.skipped_existing)
+        if results.graph.dry_run:
+            logger.success(
+                "  dry_run_would_create: %s",
+                results.graph.dry_run_would_create,
+            )
+            logger.success(
+                "  dry_run_would_update_parent: %s",
+                results.graph.dry_run_would_update_parent,
+            )
+        else:
+            logger.success("  parent_updates: %s", results.graph.parent_updates)
+
+    if results.metadata is not None:
+        logger.success(
+            "Metadata ingest totals (dry_run=%s)",
+            results.metadata.dry_run,
+        )
+        if results.metadata.dry_run:
+            logger.success(
+                "  dry_run_would_update_metadata: %s",
+                results.metadata.dry_run_would_update_metadata,
+            )
+        else:
+            logger.success(
+                "  metadata_updates: %s",
+                results.metadata.metadata_updates,
+            )
+        logger.success("  skipped_not_found: %s", results.metadata.skipped_not_found)
 
 
 def main(argv: list[str] | None = None) -> int:
