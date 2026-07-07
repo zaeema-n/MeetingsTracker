@@ -1,0 +1,40 @@
+{
+  "entity_key": "cbsl_act_2023",
+  "metadata": [
+    {
+      "key": "related_documents",
+      "value": ["url-to-doc"]
+    },
+    {
+      "key": "content",
+      "value": {
+        "establishments": {
+          "CBSL Governing Board": {
+            "node_id": "cbsl_governing_board",
+            "mandate": {
+              "quote": "There shall be established a CBSL Governing Board (hereinafter referred to as the 'Board')",
+              "section": "Section 2(1)",
+              "summary": "Governing body for the CBSL Governing Board"
+            },
+            "meetings": {
+              "CBSL Governing Board Meeting": {
+                "node_id": "governing_board_meeting",
+                "frequency": {
+                  "quote": "The Board shall meet at least once in every month.",
+                  "section": "Section 12(1)",
+                  "summary": "Monthly",
+                  "minimum_frequency": true
+                },
+                "required_participants": {
+                  "quote": "The Chairman of the Commission shall preside at all meetings of the Commission. In the absence of the Chairman from any meeting of the Commission, the Vice Chairman shall preside at such meeting",
+                  "section": "Section 2",
+                  "summary": "The chairman and 5 appointed members"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

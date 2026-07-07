@@ -4,9 +4,19 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Iterator, Literal
 
+from pydantic import BaseModel, Field
+
 from ingestion.pack.schema_loader import PackSchema
 
 IngestMode = Literal["resolve", "create"]
+
+
+class MetadataDocument(BaseModel):
+    """Validated metadata payload loaded from a JSON sidecar file."""
+
+    entity_key: str
+    metadata: list[dict[str, Any]] = Field(min_length=1)
+    source_path: Path
 
 
 @dataclass

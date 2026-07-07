@@ -1,0 +1,28 @@
+{
+  "entity_key": "governing_board_meeting",
+  "metadata": [
+    {
+      "key": "event_instances",
+      "value": {
+        "157th Governing Board Meeting": {
+          "start_time": "2026-02-18T14:30:00Z",
+          "related_documents": [
+            "https://opendata.lk/storage/minutes/sea_156.pdf"
+          ]
+        },
+        "158th Governing Board Meeting": {
+          "start_time": "2026-02-26T14:30:00Z",
+          "related_documents": [
+            "https://opendata.lk/storage/minutes/sea_156.pdf"
+          ]
+        },
+        "159th Governing Board Meeting": {
+          "start_time": "2026-03-26T14:00:00Z",
+          "related_documents": [
+            "https://opendata.lk/storage/minutes/sea_156.pdf"
+          ]
+        }
+      }
+    }
+  ]
+}
