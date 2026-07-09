@@ -35,14 +35,14 @@ INGESTION_BASE_URL="http://localhost:8080"
 
 ## Pack layout
 
-Each ministry folder contains four YAML files and optional JSON metadata sidecars:
+Each ministry folder may contain any subset of the four pack YAML files plus optional JSON metadata sidecars. Ingest loads whichever YAML files are present and skips the rest.
 
 ```text
 data/<Ministry name>/
-  acts.yaml
-  organisations.yaml
-  meetings.yaml
-  rtis.yaml
+  acts.yaml                  # optional
+  organisations.yaml         # optional
+  meetings.yaml              # optional
+  rtis.yaml                  # optional
   act_metadata.json          # optional
   meeting_metadata.json      # optional
   *_metadata.json            # any future sidecar files

@@ -9,6 +9,7 @@ import yaml
 from ingestion.pack.errors import PackLoadError
 from ingestion.pack.models import IngestMode, IngestRecord, PackState, ResolveContext
 from ingestion.pack.schema_loader import PackSchema, load_pack_schema
+from ingestion.utils.logger import logger
 
 META_KEYS = {"ingest"}
 
@@ -182,7 +183,7 @@ def load_graph_pack(
     Load a ministry graph pack directory and produce ingest records with resolve/create modes.
 
     Args:
-        pack_dir: Path to data/<Ministry name>/ containing acts, organisations, meetings, rtis.
+        pack_dir: Path to data/<Ministry name>/; any present acts, organisations, meetings, or rtis YAMLs are loaded.
         active_at: ISO date used for resolve lookups and create timestamps (required).
         schema_path: Optional override for schema/pack_schema.yaml.
     """
@@ -204,9 +205,13 @@ def load_graph_pack(
     for file_key, filename in pack_schema.files.items():
         file_path = pack_dir / filename
         if not file_path.is_file():
-            raise PackLoadError(f"Missing pack file {filename} in {pack_dir}")
+            logger.info("Skipping missing pack file %s in %s", filename, pack_dir)
+            continue
         raw_files[file_key] = load_yaml(file_path)
         _walk_file(raw_files[file_key], file_key, records, pack_schema, filename)
+
+    if not raw_files:
+        raise PackLoadError(f"No pack YAML files found in {pack_dir}")
 
     resolve_context = ResolveContext(active_at=active_at)
 

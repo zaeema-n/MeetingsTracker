@@ -28,7 +28,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "pack_dir",
         type=Path,
-        help="Path to data/<Ministry name>/ containing acts, organisations, meetings, rtis",
+        help="Path to data/<Ministry name>/ containing pack YAML files to ingest",
     )
     parser.add_argument(
         "--active-at",
