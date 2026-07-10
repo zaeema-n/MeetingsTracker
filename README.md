@@ -82,23 +82,27 @@ data/Minister of Finance, Planning and Economic Development/
 
 Rich document data can live in `*_metadata.json` sidecar files alongside the YAML pack. The loader discovers every file matching `*_metadata.json` in the ministry folder (e.g. `act_metadata.json`, `meeting_metadata.json`) — no config changes needed for new sidecars.
 
-**Envelope** (matches OpenGIN `EntityCreate.metadata`):
+**Envelope** — each sidecar file contains one or more entities under `entities`:
 
 ```json
 {
-  "entity_key": "<openGIN entity id>",
-  "metadata": [
-    { "key": "<metadata key>", "value": <any JSON> }
+  "entities": [
+    {
+      "entity_key": "<openGIN entity id>",
+      "metadata": [
+        { "key": "<metadata key>", "value": <any JSON> }
+      ]
+    }
   ]
 }
 ```
 
-| File | `entity_key` | Metadata keys | Target kind |
-|------|--------------|---------------|-------------|
+| File | Entities | Metadata keys | Target kind |
+|------|----------|---------------|-------------|
 | `act_metadata.json` | `cbsl_act_2023` | `related_documents`, `content` | `Document/act` |
-| `meeting_metadata.json` | `governing_board_meeting` | `event_instances` | `Event/meeting` |
+| `meeting_metadata.json` | `governing_board_meeting`, … | `event_instances` | `Event/meeting` |
 
-**`entity_key`** is the OpenGIN entity id. For create-path entities (acts, meetings, boards, etc.) this is the same as the pack `id` in the YAML files — no resolve step.
+**`entity_key`** is the OpenGIN entity id. For create-path entities (acts, meetings, boards, etc.) this is the same as the pack `id` in the YAML files — no resolve step. A single `*_metadata.json` file may list multiple entities (e.g. both meeting types in one `meeting_metadata.json`).
 
 `node_id` references inside act `content` (e.g. `cbsl_governing_board`, `governing_board_meeting`) are semantic links within the MongoDB metadata document. They do **not** create graph edges; graph structure still comes from YAML (`mandated_by`, org tree, etc.).
 

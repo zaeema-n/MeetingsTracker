@@ -36,6 +36,67 @@ def _validate_metadata_entries(raw_metadata: Any, *, file_label: str) -> list[di
     return validated_metadata
 
 
+def _parse_entity_block(
+    raw_entity: Any,
+    *,
+    file_label: str,
+    index: int,
+    source_path: Path,
+) -> MetadataDocument:
+    entry_label = f"{file_label} entities[{index}]"
+    if not isinstance(raw_entity, dict):
+        raise PackLoadError(f"{entry_label} must be a mapping")
+
+    entity_key = raw_entity.get("entity_key")
+    if not isinstance(entity_key, str) or not entity_key.strip():
+        raise PackLoadError(f"{entry_label} 'entity_key' must be a non-empty string")
+
+    metadata = _validate_metadata_entries(raw_entity.get("metadata"), file_label=entry_label)
+
+    try:
+        return MetadataDocument(
+            entity_key=entity_key.strip(),
+            metadata=metadata,
+            source_path=source_path,
+        )
+    except ValidationError as exc:
+        raise PackLoadError(f"Invalid metadata document in {entry_label}: {exc}") from exc
+
+
+def _load_metadata_file(path: Path) -> list[MetadataDocument]:
+    file_label = path.name
+
+    try:
+        payload = _load_json(path)
+    except json.JSONDecodeError as exc:
+        raise PackLoadError(f"Invalid JSON in {file_label}: {exc}") from exc
+
+    if not isinstance(payload, dict):
+        raise PackLoadError(f"{file_label} must be a mapping at the top level")
+
+    raw_entities = payload.get("entities")
+    if not isinstance(raw_entities, list) or not raw_entities:
+        raise PackLoadError(f"{file_label} 'entities' must be a non-empty list")
+
+    documents: list[MetadataDocument] = []
+    seen_entity_keys: set[str] = set()
+    for index, raw_entity in enumerate(raw_entities):
+        document = _parse_entity_block(
+            raw_entity,
+            file_label=file_label,
+            index=index,
+            source_path=path,
+        )
+        if document.entity_key in seen_entity_keys:
+            raise PackLoadError(
+                f"{file_label} contains duplicate entity_key {document.entity_key!r}"
+            )
+        seen_entity_keys.add(document.entity_key)
+        documents.append(document)
+
+    return documents
+
+
 def load_metadata_files(pack_dir: Path) -> list[MetadataDocument]:
     """Load and validate all ``*_metadata.json`` files from a ministry pack directory."""
 
@@ -45,31 +106,6 @@ def load_metadata_files(pack_dir: Path) -> list[MetadataDocument]:
 
     documents: list[MetadataDocument] = []
     for path in sorted(pack_dir.glob("*_metadata.json")):
-        file_label = path.name
-
-        try:
-            payload = _load_json(path)
-        except json.JSONDecodeError as exc:
-            raise PackLoadError(f"Invalid JSON in {file_label}: {exc}") from exc
-
-        if not isinstance(payload, dict):
-            raise PackLoadError(f"{file_label} must be a mapping at the top level")
-
-        entity_key = payload.get("entity_key")
-        if not isinstance(entity_key, str) or not entity_key.strip():
-            raise PackLoadError(f"{file_label} 'entity_key' must be a non-empty string")
-
-        metadata = _validate_metadata_entries(payload.get("metadata"), file_label=file_label)
-
-        try:
-            documents.append(
-                MetadataDocument(
-                    entity_key=entity_key.strip(),
-                    metadata=metadata,
-                    source_path=path,
-                )
-            )
-        except ValidationError as exc:
-            raise PackLoadError(f"Invalid metadata document in {file_label}: {exc}") from exc
+        documents.extend(_load_metadata_file(path))
 
     return documents
