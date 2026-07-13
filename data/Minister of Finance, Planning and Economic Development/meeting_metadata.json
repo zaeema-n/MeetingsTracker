@@ -27,6 +27,34 @@
           }
         }
       ]
+    },
+    {
+      "entity_key": "monetary_policy_council_meeting",
+      "metadata": [
+        {
+          "key": "event_instances",
+          "value": {
+            "88th Monetary Policy Council Meeting": {
+              "start_time": "2026-06-03T00:00:00Z"
+            },
+            "89th Monetary Policy Council Meeting": {
+              "start_time": "2026-02-11T00:00:00Z"
+            },
+            "90th Monetary Policy Council Meeting": {
+              "start_time": "2026-02-25T00:00:00Z"
+            },
+            "91st Monetary Policy Council Meeting": {
+              "start_time": "2026-03-11T00:00:00Z"
+            },
+            "92nd Monetary Policy Council Meeting": {
+              "start_time": "2026-03-24T00:00:00Z"
+            },
+            "93rd Monetary Policy Council Meeting": {
+              "start_time": "2026-04-07T00:00:00Z"
+            }
+          }
+        }
+      ]
     }
   ]
 }
