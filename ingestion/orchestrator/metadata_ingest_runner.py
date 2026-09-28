@@ -2,12 +2,14 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from ingestion.exceptions.exceptions import NotFoundError
 from ingestion.models.schema import Entity, EntityCreate
 from ingestion.orchestrator.models import MetadataIngestResult
 from ingestion.pack import load_metadata_files
 from ingestion.services.ingestion_service import IngestionService
 from ingestion.services.read_service import ReadService
 from ingestion.utils.logger import logger
+from ingestion.utils.metadata_merge import merge_metadata, normalize_metadata_response
 
 
 class MetadataIngestRunner:
@@ -49,30 +51,46 @@ class MetadataIngestRunner:
                 )
                 continue
 
+            existing_metadata = await self._fetch_existing_metadata(entity_id)
+            merged_metadata = merge_metadata(existing_metadata, document.metadata)
+
             if dry_run:
                 result.dry_run_would_update_metadata += 1
                 logger.info(
-                    "[DRY-RUN] Would update metadata %s from %s (%s keys)",
+                    "[DRY-RUN] Would update metadata %s from %s "
+                    "(sidecar=%s keys, existing=%s keys, merged=%s keys)",
                     entity_id,
                     document.source_path.name,
                     len(document.metadata),
+                    len(existing_metadata),
+                    len(merged_metadata),
                 )
                 continue
 
             await self.ingestion_service.update_entity(
                 entity_id,
-                EntityCreate(id=entity_id, metadata=document.metadata),
+                EntityCreate(id=entity_id, metadata=merged_metadata),
             )
             result.metadata_updates += 1
             logger.success(
-                "[UPDATE] metadata %s from %s (%s keys)",
+                "[UPDATE] metadata %s from %s "
+                "(sidecar=%s keys, existing=%s keys, merged=%s keys)",
                 entity_id,
                 document.source_path.name,
                 len(document.metadata),
+                len(existing_metadata),
+                len(merged_metadata),
             )
 
         self._log_summary(result)
         return result
+
+    async def _fetch_existing_metadata(self, entity_id: str) -> list[dict]:
+        try:
+            raw = await self.read_service.get_entity_metadata(entity_id)
+        except NotFoundError:
+            return []
+        return normalize_metadata_response(raw)
 
     def _log_summary(self, result: MetadataIngestResult) -> None:
         logger.success("Metadata ingest complete (dry_run=%s)", result.dry_run)

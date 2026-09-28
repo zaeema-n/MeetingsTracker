@@ -194,7 +194,10 @@ Create-path entities are matched by pack `id` + OpenGIN `kind`. If an entity alr
 
 1. **Load** all `*_metadata.json` sidecar files from the pack directory.
 2. **Verify** each `entity_key` exists in OpenGIN (id-only search).
-3. **Update** entity metadata via `PUT /entities/{id}` with the sidecar payload. Entities not found are skipped with a warning.
+3. **Fetch** existing entity metadata via `GET /entities/{id}/metadata`.
+4. **Deep-merge** the sidecar onto existing metadata, then **update** via `PUT /entities/{id}` with the merged payload. Entities not found are skipped with a warning.
+
+Merge rules: keys only on the entity are kept; keys only in the sidecar are added; shared keys deep-merge (dicts recurse, lists concatenate, scalars / type mismatches take the sidecar value).
 
 Metadata does not require the entity to have been created in the current run — it works on any pre-existing node with a matching id.
 
@@ -253,7 +256,7 @@ government:
 [INFO]   created: 0
 [INFO]   skipped_existing: 1
 [INFO]   dry_run_would_create: 10
-[INFO] [DRY-RUN] Would update metadata cbsl_act_2023 from act_metadata.json (2 keys)
+[INFO] [DRY-RUN] Would update metadata cbsl_act_2023 from act_metadata.json (sidecar=2 keys, existing=0 keys, merged=2 keys)
 [INFO] Metadata ingest totals (dry_run=True)
 [INFO]   dry_run_would_update_metadata: 2
 [INFO]   skipped_not_found: 0
